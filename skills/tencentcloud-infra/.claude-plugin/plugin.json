@@ -1,0 +1,8 @@
+{
+  "name": "tencentcloud-infra",
+  "description": "Standardized TencentCloud tccli operations with safety workflow",
+  "version": "1.0.0",
+  "author": {
+    "name": "skills-maintainers"
+  }
+}

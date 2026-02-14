@@ -1,0 +1,8 @@
+{
+  "name": "aliyun-infra",
+  "description": "Standardized Aliyun CLI operations with safety workflow",
+  "version": "1.0.0",
+  "author": {
+    "name": "skills-maintainers"
+  }
+}

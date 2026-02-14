@@ -1,0 +1,8 @@
+{
+  "name": "cliproxyapi-management-api",
+  "description": "CLIProxyAPI management and provider API reference skill",
+  "version": "1.0.0",
+  "author": {
+    "name": "skills-maintainers"
+  }
+}
