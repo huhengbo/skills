@@ -1,13 +1,13 @@
-# huhengbo/skills
+# skills
 
-个人自用 Codex Skills 仓库，用于沉淀可复用的技能模板、接口参考和自动化操作指南。
+Reusable Codex Skills repository for standardized operations, API references, and automation workflows.
 
-## 目标
-- 统一管理自用 skills
-- 持续迭代已有 skills
-- 让后续新增 skill 的结构和质量保持一致
+## Goals
+- Maintain reusable, production-safe skills.
+- Keep skill structure and quality consistent.
+- Support long-term iterative updates.
 
-## 目录约定
+## Repository Layout
 ```text
 skills/
   <skill-name>/
@@ -15,32 +15,38 @@ skills/
     agents/
       openai.yaml
     references/
-    scripts/      (可选)
-    assets/       (可选)
+    scripts/      (optional)
+    assets/       (optional)
 ```
 
-## 当前 Skills
+## Skills
 - `cliproxyapi-management-api`
-  - CLIProxyAPI 全量接口参考（核心 API、管理 API、Amp 路由）
-  - Provider 增删改查请求规范
-  - 安全调用模板（占位符，不含敏感信息）
+  - Full CLIProxyAPI interface reference (core API, management API, Amp routes)
+  - Provider CRUD schemas and safe request templates
 
-## 新增一个 Skill（建议流程）
-1. 使用 `skill-creator` 初始化骨架。
-2. 在 `SKILL.md` 写清楚触发场景和执行流程。
-3. 将详细规范放到 `references/`，保持 `SKILL.md` 精简。
-4. 运行校验脚本（如 `quick_validate.py`）确保结构合法。
-5. 提交到仓库，保持单次提交聚焦一个 skill 或一个变更主题。
+- `aliyun-infra`
+  - Standardized Aliyun CLI operations across profiles and regions
+  - Safety-first workflow for mutating operations
+  - Generic troubleshooting and command catalog
+  - Sanitized DevOps activity aggregation script
 
-## 命名规范
-- skill 名称使用小写字母、数字、连字符（kebab-case）
-- 示例：`cliproxyapi-management-api`
+## New Skill Workflow
+1. Initialize skill skeleton with `skill-creator`.
+2. Keep `SKILL.md` concise: trigger context + execution workflow.
+3. Put detailed technical material into `references/`.
+4. Add scripts only for repetitive or deterministic tasks.
+5. Validate each skill with `quick_validate.py` before commit.
 
-## 安全规范
-- 严禁提交任何密钥、token、账号、真实内网地址
-- 示例请求统一使用占位符：`<BASE_URL>`、`<API_KEY>`、`<MANAGEMENT_KEY>`
+## Naming Rules
+- Use lowercase letters, digits, and hyphens (kebab-case).
+- Example: `aliyun-infra`.
 
-## 维护建议
-- 每个 skill 变更附带简短变更说明
-- 涉及接口更新时同步更新 `references/`
-- 定期清理无效或重复 skill
+## Security Rules
+- Never commit secrets, tokens, account IDs, org IDs, or internal addresses.
+- Use placeholders in examples (for example `<BASE_URL>`, `<API_KEY>`, `<profile>`).
+- Mark destructive operations and require explicit confirmation in skill workflows.
+
+## Maintenance Rules
+- Keep each commit focused on one skill or one update theme.
+- Update related `references/` whenever behavior or API surface changes.
+- Remove stale or duplicated skill content regularly.

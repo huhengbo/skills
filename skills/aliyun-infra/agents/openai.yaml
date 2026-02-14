@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aliyun Infra Ops"
+  short_description: "Standardized Aliyun CLI operations with safe workflows"
+  default_prompt: "Use $aliyun-infra to inspect or change Alibaba Cloud resources safely with profile and region checks."
