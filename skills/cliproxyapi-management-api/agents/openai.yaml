@@ -1,0 +1,4 @@
+interface:
+  display_name: "CLIProxyAPI Management API"
+  short_description: "Complete endpoint guide for CLIProxyAPI management APIs"
+  default_prompt: "Use $cliproxyapi-management-api to list, explain, and generate safe calls for CLIProxyAPI endpoints."
