@@ -1,0 +1,4 @@
+interface:
+  display_name: "TencentCloud Infra Ops"
+  short_description: "Safe tccli operations with profile and region controls"
+  default_prompt: "Use $tencentcloud-infra to inspect or modify Tencent Cloud resources with safe confirmation workflow."

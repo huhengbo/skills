@@ -28,7 +28,11 @@ skills/
   - Standardized Aliyun CLI operations across profiles and regions
   - Safety-first workflow for mutating operations
   - Generic troubleshooting and command catalog
-  - Sanitized DevOps activity aggregation script
+
+- `tencentcloud-infra`
+  - Standardized TencentCloud `tccli` operations across profiles and regions
+  - Safety-first workflow for mutating operations
+  - Generic troubleshooting and command catalog
 
 ## New Skill Workflow
 1. Initialize skill skeleton with `skill-creator`.

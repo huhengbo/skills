@@ -40,8 +40,5 @@ Load `references/command-catalog.md` for service commands and safe examples.
 ## Troubleshooting
 Load `references/troubleshooting.md` for CLI auth/profile/region/permission failures.
 
-## DevOps Activity Aggregation
-Use `scripts/devops_activity_last30d.py` for organization activity summaries.
-
 ## Improvement Backlog
 Load `references/improvement-checklist.md` when planning next updates.
