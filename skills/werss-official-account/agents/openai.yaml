@@ -1,0 +1,4 @@
+interface:
+  display_name: "WeRSS Official Account"
+  short_description: "WeChat Official Account search and RSS workflows"
+  default_prompt: "Use $werss-official-account to find recent WeChat Official Account posts and summarize the key updates."

@@ -1,0 +1,8 @@
+{
+  "name": "werss-official-account",
+  "description": "WeRSS-powered WeChat Official Account search, subscription, RSS, and article research skill",
+  "version": "1.0.0",
+  "author": {
+    "name": "skills-maintainers"
+  }
+}

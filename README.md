@@ -34,6 +34,11 @@ skills/
   - Safety-first workflow for mutating operations
   - Generic troubleshooting and command catalog
 
+- `werss-official-account`
+  - Search, subscribe, refresh, and summarize WeChat Official Account content through WeRSS
+  - Generate RSS / Atom / JSON feed URLs for accounts, tags, and keyword feeds
+  - Access Key based API wrapper for repeatable agent workflows
+
 ## New Skill Workflow
 1. Initialize skill skeleton with `skill-creator`.
 2. Keep `SKILL.md` concise: trigger context + execution workflow.
