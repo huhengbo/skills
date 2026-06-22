@@ -13,6 +13,23 @@ aliyun bssopenapi QueryBillOverview --BillingCycle <YYYY-MM> --profile <profile>
 aliyun bssopenapi QueryBill --BillingCycle <YYYY-MM> --PageNum 1 --PageSize 100 --profile <profile>
 ```
 
+## SMS (Dysmsapi)
+Use `references/sms.md` before sending SMS or querying SMS-specific approval and delivery state.
+
+```bash
+aliyun plugin install --names dysmsapi
+aliyun dysmsapi query-sms-sign-list --api-version 2017-05-25 --page-index 1 --page-size 50 --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi query-sms-template-list --api-version 2017-05-25 --page-index 1 --page-size 50 --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi get-sms-sign --api-version 2017-05-25 --sign-name <signName> --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi get-sms-template --api-version 2017-05-25 --template-code <templateCode> --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi send-sms --api-version 2017-05-25 --phone-numbers <phoneNumbers> --sign-name <signName> --template-code <templateCode> --template-param <templateParamJson> --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi send-batch-sms --api-version 2017-05-25 --phone-number-json <phoneNumberJson> --sign-name-json <signNameJson> --template-code <templateCode> --template-param-json <templateParamJson> --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi query-send-details --api-version 2017-05-25 --phone-number <phoneNumber> --send-date <YYYYMMDD> --biz-id <bizId> --page-size 10 --current-page 1 --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi query-send-statistics --api-version 2017-05-25 --is-globe 1 --start-date <YYYYMMDD> --end-date <YYYYMMDD> --page-index 1 --page-size 10 --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi query-sms-qualification-record --api-version 2017-05-25 --page-no 1 --page-size 20 --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+aliyun dysmsapi query-single-sms-qualification --api-version 2017-05-25 --qualification-group-id <qualificationGroupId> --profile <profile> --user-agent AlibabaCloud-Agent-Skills/alibabacloud-sms-send-short-message --read-timeout 3
+```
+
 ## ECS
 ```bash
 aliyun ecs DescribeRegions --profile <profile>
@@ -87,3 +104,5 @@ For mutating operations, always:
 1. Confirm profile + region + target resource.
 2. Show planned command.
 3. Ask for explicit confirmation.
+
+For SMS send operations, additionally confirm recipients, signature, template, template params, and billable external communication impact.

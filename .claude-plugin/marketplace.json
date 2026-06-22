@@ -16,7 +16,7 @@
     {
       "name": "aliyun-infra",
       "source": "./skills/aliyun-infra",
-      "description": "Standardized Aliyun CLI operations with safety workflow",
+      "description": "Standardized Aliyun CLI operations with safe infra and SMS workflows",
       "version": "1.0.0",
       "author": {
         "name": "skills-maintainers"

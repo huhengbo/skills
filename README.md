@@ -26,6 +26,7 @@ skills/
 
 - `aliyun-infra`
   - Standardized Aliyun CLI operations across profiles and regions
+  - SMS/Dysmsapi workflows for signatures, templates, sending, delivery details, and statistics
   - Safety-first workflow for mutating operations
   - Generic troubleshooting and command catalog
 
