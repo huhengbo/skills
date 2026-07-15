@@ -16,7 +16,9 @@ description: Manage Alibaba Cloud Yunxiao (云效) project lifecycles through th
 
 Treat the MCP as ready only after a minimal read-only identity call succeeds and the tools required for the requested operation are present. Equivalent tools are acceptable when their input and result contracts are verified. Missing or ambiguous capability means stop and report `CAPABILITY_MISSING`; do not implement a second Yunxiao API client as a fallback.
 
-The official hosted MCP endpoint and credentials belong to the environment, not the repository. Never request that a user paste a token into chat. Never put credentials, endpoint overrides, cookies, or authorization headers in `yunxiao.toml`.
+The official hosted MCP endpoint and credentials belong to the environment, not the repository. Use `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` as the primary token variable and accept `YUNXIAO_ACCESS_TOKEN` only as a same-value legacy alias. If both exist with different values, stop with `CONFIG_ERROR` before any network call. Never request that a user paste or fill a token during project setup.
+
+Resolve organization and project IDs only from the repository-root `yunxiao.toml`. Never use `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` or another global organization variable as a write binding. Never put credentials, endpoint overrides, cookies, or authorization headers in `yunxiao.toml`.
 
 ## Resolve context and targets
 

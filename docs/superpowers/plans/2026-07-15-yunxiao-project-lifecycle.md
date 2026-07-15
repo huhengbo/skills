@@ -114,7 +114,7 @@ test("reports TOKEN_MISSING without making a request", async () => {
 
 test("maps a 401 response to AUTH_FAILED", async () => {
   const result = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN: "secret" },
     platform: "win32",
     fetchImpl: async () => new Response("{}", { status: 401 }),
     bindingText: null,

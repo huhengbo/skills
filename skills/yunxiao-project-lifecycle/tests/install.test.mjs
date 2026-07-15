@@ -92,7 +92,10 @@ test("uses AGENT_SKILLS_DIR only when --target is absent", async () => {
 test("never emits credential environment variables", async () => {
   const target = await mkdtemp(path.join(tmpdir(), "yunxiao-install-secret-"));
   const secret = "secret-value-that-must-never-appear";
-  const result = runInstaller(["--json", "--target", target], { YUNXIAO_ACCESS_TOKEN: secret });
+  const result = runInstaller(["--json", "--target", target], {
+    ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN: secret,
+    YUNXIAO_ACCESS_TOKEN: secret,
+  });
   assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(secret));
-  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /YUNXIAO_ACCESS_TOKEN/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /(?:ALIBABA_CLOUD_)?YUNXIAO_ACCESS_TOKEN/);
 });

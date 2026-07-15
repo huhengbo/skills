@@ -72,6 +72,9 @@ function printHuman(result) {
   console.log(`Platform: ${result.platform}`);
   console.log(`Architecture: ${result.architecture}`);
   console.log(`Token configured: ${result.token.present ? "yes" : "no"}`);
+  if (result.token.source) {
+    console.log(`Token environment: ${result.token.source}`);
+  }
   console.log(`Project binding: ${result.binding.status}`);
   console.log(`Region endpoint configured: ${result.endpoint.regionConfigured ? "yes" : "no"}`);
   if (result.capabilities.missing.length > 0) {

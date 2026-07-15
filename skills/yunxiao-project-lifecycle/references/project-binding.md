@@ -61,6 +61,7 @@ Replace placeholders before using the file. The bundled parser deliberately reje
 - Optional default routing: `assignees.requirement`, `assignees.bug`, `assignees.task`. Each configured table requires both `user_id` and `name`.
 - Do not store status IDs, sprint IDs, or version IDs. Discover them from current project state.
 - Do not store tokens, AccessKeys, cookies, MCP URLs, authorization headers, client paths, or client configuration.
+- Do not read organization context from `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID`; `organization.id` in this file is the only project binding source.
 - Treat IDs as internal metadata, not credentials. A team may commit the file for shared behavior or ignore it when project identifiers are confidential; never decide that policy silently.
 
 ## Resolution precedence
