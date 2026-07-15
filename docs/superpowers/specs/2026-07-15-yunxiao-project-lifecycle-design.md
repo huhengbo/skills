@@ -66,7 +66,7 @@ Agent Skills 规范定义 Skill 内容格式，但不定义客户端如何发现
 1. **平台探测**：识别 Windows、macOS 或 Linux、CPU 架构、可用 shell、Node.js 和网络代理环境。
 2. **客户端能力探测**：确认当前智能体是否支持远程 Streamable HTTP MCP、自定义 Bearer Token 或环境变量引用。不得通过产品名称猜测配置格式。
 3. **MCP 能力探测**：检查是否存在云效组织、项目、成员、工作项、迭代和版本的等价工具。
-4. **凭据探测**：只检查 `YUNXIAO_ACCESS_TOKEN` 是否存在，不读取到输出、不记录值、不显示摘要。
+4. **凭据探测**：优先检查 `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN`，兼容旧名 `YUNXIAO_ACCESS_TOKEN`；只检查存在性和一致性，不读取到输出、不记录值、不显示摘要。两个变量同时存在但值不一致时返回 `CONFIG_ERROR`，禁止网络调用。
 5. **Endpoint 探测**：仅允许 HTTPS 云效官方托管地址；检查 DNS、TLS、代理和协议响应，不允许关闭证书验证。
 6. **只读认证验证**：调用当前用户或等价只读工具，区分未配置、未认证、无权限、限流、网络失败和工具缺失。
 7. **配置引导**：如果客户端支持可验证的 MCP 安装命令或配置接口，先展示目标和变更再协助执行；否则给出适配当前平台的最小手工步骤。不得猜测配置文件路径或格式。
@@ -89,7 +89,9 @@ Agent Skills 规范定义 Skill 内容格式，但不定义客户端如何发现
 
 ### 凭据原则
 
-- 统一使用环境变量名 `YUNXIAO_ACCESS_TOKEN`，Token 不进入仓库、Skill、命令参数、URL、日志或聊天。
+- 主环境变量统一为 `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN`。兼容旧名 `YUNXIAO_ACCESS_TOKEN`，但两者只能引用同一份本地密钥；主变量优先，值不一致时失败关闭，不做静默回退。
+- `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` 不是项目绑定来源。组织和项目 ID 必须来自仓库根目录 `yunxiao.toml`，避免全局环境覆盖项目上下文。
+- Token 不进入仓库、Skill、命令参数、URL、日志或聊天。Skill 不得要求用户在项目初始化流程中粘贴或填写真实 Token。
 - 引导用户在本机安全输入 Token；不得要求用户粘贴到对话中。
 - GUI 客户端可能无法继承启动后的 shell 环境变量，必须通过新进程验证，不能仅检查配置文件后宣称成功。
 - 若客户端不支持环境变量引用或安全凭据存储，停止自动配置并说明风险；未经用户明确同意不得把 Token 写入明文配置。
@@ -147,7 +149,7 @@ name = "缺陷负责人"
 - `workitem_types.requirement`、`workitem_types.bug` 和 `workitem_types.task` 是可选的默认工作项类型映射。存在时同时保存稳定 ID 和显示名称。
 - `assignees.requirement`、`assignees.bug` 和 `assignees.task` 是可选的默认负责人映射。存在时同时保存稳定用户 ID 和显示名称。
 - 用户在当前请求中明确指定的类型或负责人优先于默认映射。没有默认映射且动态查询得到多个候选时，必须请求用户选择。
-- Token、AccessKey、Cookie、MCP 地址及其他凭据禁止写入绑定文件。
+- Token、AccessKey、Cookie、MCP 地址及其他凭据禁止写入绑定文件；`organization.id` 和 `project.id` 是项目级绑定，不得由全局组织环境变量替代。
 - 状态 ID、迭代 ID 和版本 ID 不写入首版绑定文件，必须根据当前工作流和实时数据动态获取。
 - 文件可以纳入版本控制以便团队共享；如果组织或项目标识属于内部敏感元数据，由项目自行加入 `.gitignore`。Skill 不自动决定是否提交。
 
@@ -236,6 +238,7 @@ name = "缺陷负责人"
 - 使用 Agent Skills 参考实现 `uvx --from skills-ref agentskills validate <skill-dir>` 验证目录、名称和 YAML frontmatter；当前智能体的验证器只能作为附加检查。
 - 检查核心目录不包含任何客户端专属安装路径、展示元数据或配置文件。
 - 扫描 Skill 文件，确保不存在 Token、当前账户信息或来自真实环境的组织、项目和人员 ID；格式示例只能使用明显占位符。
+- 验证主 Token 变量、旧变量兼容、同值双变量和冲突双变量；冲突必须返回 `CONFIG_ERROR` 且产生零次网络调用。
 - 扫描占位符、重复规则、矛盾策略和未引用的文件。
 - 对 `doctor.mjs` 和 `install.mjs` 运行格式、类型和 Node.js 18+ 执行检查，并验证所有输出都经过凭据脱敏。
 - 验证 `install.mjs` 未提供目标时拒绝安装、默认 dry-run、显式应用时原子复制、已有目录备份以及路径穿越防护。
