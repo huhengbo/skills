@@ -1,6 +1,6 @@
 # skills
 
-Reusable Codex Skills repository for standardized operations, API references, and automation workflows.
+Reusable Agent Skills repository for standardized operations, API references, and automation workflows. Core skills follow the portable [Agent Skills specification](https://agentskills.io/specification); client-specific metadata is optional and never defines core behavior.
 
 ## Goals
 - Maintain reusable, production-safe skills.
@@ -12,11 +12,11 @@ Reusable Codex Skills repository for standardized operations, API references, an
 skills/
   <skill-name>/
     SKILL.md
-    agents/
-      openai.yaml
     references/
     scripts/      (optional)
     assets/       (optional)
+    agents/       (optional client adapter)
+    .claude-plugin/ (optional client adapter)
 ```
 
 ## Skills
@@ -40,20 +40,25 @@ skills/
   - Generate RSS / Atom / JSON feed URLs for accounts, tags, and keyword feeds
   - Access Key based API wrapper for repeatable agent workflows
 
+- `yunxiao-project-lifecycle`
+  - Manage requirements, defects, tasks, assignees, comments, workflows, sprints, versions, and milestones through the official Yunxiao MCP
+  - Bind a repository to one Yunxiao project through a portable root-level `yunxiao.toml`
+  - Diagnose MCP, authentication, capabilities, and bindings on Windows, macOS, and Linux without storing credentials
+
 ## New Skill Workflow
 1. Initialize skill skeleton with `skill-creator`.
 2. Keep `SKILL.md` concise: trigger context + execution workflow.
 3. Put detailed technical material into `references/`.
 4. Add scripts only for repetitive or deterministic tasks.
-5. Validate each skill with `quick_validate.py` before commit.
+5. Validate each portable skill with the Agent Skills reference command `uvx --from skills-ref agentskills validate <skill-dir>`; use client-specific validators only as additional checks.
 
 ## Naming Rules
 - Use lowercase letters, digits, and hyphens (kebab-case).
 - Example: `aliyun-infra`.
 
 ## Security Rules
-- Never commit secrets, tokens, account IDs, org IDs, or internal addresses.
-- Use placeholders in examples (for example `<BASE_URL>`, `<API_KEY>`, `<profile>`).
+- Never commit secrets, tokens, cookies, authorization headers, or private endpoints.
+- Use placeholders for account, organization, project, and user IDs in reusable Skill examples. Consumer repositories may version stable binding IDs only when their own data-classification policy permits it.
 - Mark destructive operations and require explicit confirmation in skill workflows.
 
 ## Maintenance Rules
