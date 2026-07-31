@@ -27,6 +27,8 @@ skills/
 - `aliyun-infra`
   - Standardized Aliyun CLI operations across profiles and regions
   - SMS/Dysmsapi workflows for signatures, templates, sending, delivery details, and statistics
+  - Independent CAS certificate application/renewal, DNS validation, and OSS deployment workflows
+  - Public TLS propagation verification for edge certificate rollouts
   - Safety-first workflow for mutating operations
   - Generic troubleshooting and command catalog
 

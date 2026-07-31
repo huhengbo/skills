@@ -115,3 +115,52 @@ Action:
 aliyun <service> <operation> --help
 ```
 Use latest help output to adjust parameters.
+
+## CAS Command or Permission Issue
+Symptom:
+- `aliyun cas` says a certificate action is invalid or unavailable.
+- `Forbidden` or `NoPermission` is returned while listing certificates, adding DNS records, or creating a deployment job.
+
+Action:
+1. Inspect the current command schema rather than guessing parameters:
+```bash
+aliyun cas --help
+aliyun cas <ApiName> --help
+```
+2. Verify the CAS profile identity, then request the least-privilege CAS action shown in the error.
+3. Verify the DNS profile independently if validation records are managed by a different account.
+4. Do not switch to browser automation merely because legacy `aliyun oss` cannot select the expected profile; CAS deployment uses `aliyun cas` and does not require ossutil.
+
+## CAS Certificate Detail May Contain a Private Key
+Symptom:
+- A certificate detail response includes `Key`, `PrivateKey`, or PEM content.
+
+Action:
+1. Stop forwarding or saving the response.
+2. Re-run only the safe metadata query:
+```bash
+aliyun cas GetUserCertificateDetail --CertId <certificateId> --CertFilter true --profile <casProfile>
+```
+3. Summarize certificate ID, domain, status, serial, and expiry only. Never paste certificate private-key content into chat, logs, or a command preview.
+
+## OSS Deployment Succeeds but TLS Is Still Expired or Inconsistent
+Symptom:
+- CAS reports the OSS deployment job succeeded.
+- Strict HTTPS still fails, or repeated TLS handshakes return both old and new serial numbers.
+
+Action:
+1. Do not create a second deployment job or change DNS yet.
+2. Sample the public endpoint repeatedly:
+```bash
+bash <skill-dir>/scripts/check_tls_certificate.sh \
+  --host <customDomain> \
+  --expected-serial <newCertificateSerial> \
+  --samples 8 \
+  --interval 5 \
+  --require-valid
+```
+3. Wait until all samples report exactly one new serial number before running a strict request:
+```bash
+curl --noproxy '*' -4 -sSIL --fail https://<customDomain>/<path>
+```
+4. If the serial number is consistent but the page is blank, diagnose the application separately: inspect the HTTP response, JavaScript errors, and client-side route. Certificate replacement cannot fix a missing SPA route or runtime error.

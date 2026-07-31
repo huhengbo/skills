@@ -6,6 +6,8 @@
 - Standardized placeholders and safety policies.
 - Added generic profile alias template.
 - Added troubleshooting and command catalog references.
+- Added independent CAS certificate application/renewal, DNS validation, OSS deployment, and TLS propagation guidance.
+- Added a repeatable public TLS convergence checker that reports mixed edge certificates.
 
 ## Next recommended improvements
 1. Add service-specific scripts under `scripts/` for repetitive workflows (ECS inventory, DNS record diff, RDS snapshot report).
