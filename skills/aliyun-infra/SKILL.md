@@ -50,7 +50,7 @@ Load `references/cas-oss-certificates.md` before every CAS, certificate, DNS-val
 ## Certificate and OSS Rule
 Use the generic `aliyun cas <ApiName>` OpenAPI commands for CAS. A browser is not a prerequisite for a CAS-to-OSS deployment. Use the browser only if the API response requires a human action outside the CLI (for example, an email validation link) or if the current CLI/API does not expose a required field.
 
-Do not infer an OSS deployment's profile from legacy `aliyun oss` behavior. Resolve the CAS/OSS profile and, if DNS is separately managed, the DNS profile independently. Confirm that the OSS custom domain already exists before requesting the CAS resource list.
+Do not use the deprecated `aliyun oss` command for object operations. Use `aliyun ossutil` (ossutil v2). Its `--profile` selects a profile from ossutil's own configuration file (normally `~/.ossutilconfig`), not necessarily an `aliyun configure` profile with the same name; list and verify ossutil profiles before executing a command. CAS deployment does not require ossutil. Resolve CAS, ossutil, and DNS profiles independently, and confirm that the OSS custom domain already exists before requesting the CAS resource list.
 
 ## Troubleshooting
 Load `references/troubleshooting.md` for CLI auth/profile/region/permission failures.

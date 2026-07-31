@@ -129,7 +129,23 @@ aliyun cas <ApiName> --help
 ```
 2. Verify the CAS profile identity, then request the least-privilege CAS action shown in the error.
 3. Verify the DNS profile independently if validation records are managed by a different account.
-4. Do not switch to browser automation merely because legacy `aliyun oss` cannot select the expected profile; CAS deployment uses `aliyun cas` and does not require ossutil.
+4. Do not switch to browser automation because of an OSS CLI profile issue; CAS deployment uses `aliyun cas` and does not require ossutil.
+
+## OSSutil Profile Mismatch
+Symptom:
+- `aliyun ossutil` cannot find the requested profile, or accesses an unexpected OSS account or region.
+
+Action:
+1. Confirm that the command uses ossutil v2, not deprecated `aliyun oss`:
+```bash
+aliyun ossutil version
+```
+2. List profile names from ossutil's own configuration:
+```bash
+aliyun ossutil config list-profiles
+```
+3. Treat `--profile <ossutilProfile>` as a profile in `~/.ossutilconfig` (or the explicitly supplied `--config-file`), not as a guarantee that it maps to `aliyun configure --profile <profile>`.
+4. If the required profile is absent, stop before creating one. Ask for confirmation of the account, region, and local configuration-file target; never print the configuration file or put access keys in a command line.
 
 ## CAS Certificate Detail May Contain a Private Key
 Symptom:
