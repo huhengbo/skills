@@ -7,10 +7,12 @@ Prefer the Alibaba Cloud hosted Yunxiao MCP service:
 ```text
 URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management
 Transport: Streamable HTTP (stateless)
-Authentication: Authorization: Bearer <YUNXIAO_ACCESS_TOKEN>
+Authentication: Authorization: Bearer <ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN>
 ```
 
-Use `YUNXIAO_ACCESS_TOKEN` as the portable environment-variable name. Never pass a token in the query string. For a dedicated Region installation, keep the hosted MCP URL and add `X-Yunxiao-Api-Base-Url` only for an HTTPS `*.devops.aliyuncs.com` organization host verified against official documentation. The portable doctor reads that value from `YUNXIAO_API_BASE_URL`.
+Use `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` as the primary environment-variable name. Accept `YUNXIAO_ACCESS_TOKEN` only as a legacy alias to the same secret. If both exist with different values, report `CONFIG_ERROR` without making a network request. Never pass a token in the query string. For a dedicated Region installation, keep the hosted MCP URL and add `X-Yunxiao-Api-Base-Url` only for an HTTPS `*.devops.aliyuncs.com` organization host verified against official documentation. The portable doctor reads that value from `YUNXIAO_API_BASE_URL`.
+
+Do not use `ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID` as project context. Read organization and project IDs from the repository-root `yunxiao.toml`; a global organization variable must not override a project binding.
 
 ## Preflight state machine
 
@@ -19,7 +21,7 @@ Run these checks in order and stop on the first blocking result:
 1. Detect `win32`, `darwin`, or `linux`, Node.js availability, shell, architecture, and proxy environment.
 2. Detect whether the active client supports remote Streamable HTTP MCP and Bearer-token environment references. Inspect verified client capabilities; do not infer configuration from a product name.
 3. Check whether the required Yunxiao organization/project tools are already visible.
-4. Check only whether `YUNXIAO_ACCESS_TOKEN` exists. Never print, hash, summarize, or log it.
+4. Check the primary token variable and legacy alias for presence and equality. Never print, hash, summarize, or log either value.
 5. Validate the official HTTPS endpoint, DNS, TLS, proxy path, and response protocol. Never disable certificate validation or follow an untrusted redirect.
 6. Perform a minimal read-only identity call.
 7. List tools and verify capabilities required by the requested action.
@@ -65,7 +67,7 @@ If MCP is missing:
 4. Back up a config before an explicitly authorized manual edit.
 5. Never guess a schema or path and never overwrite unrelated MCP entries.
 6. Ask the user to create a Yunxiao personal access token with minimum Organization read and Projex read/write scopes. Do not ask them to paste it into chat.
-7. Configure the token locally through an environment reference or supported secret store.
+7. Configure the token locally through an `ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN` environment reference or supported secret store. If legacy clients still need `YUNXIAO_ACCESS_TOKEN`, export it from the same secret rather than maintaining a second value.
 8. Start a new client process and verify identity plus required tools.
 
 The Agent Skills specification does not define discovery directories or MCP configuration. The Skill cannot install itself before it is loaded. Obtain the canonical package from `https://github.com/huhengbo/skills/tree/main/skills/yunxiao-project-lifecycle`, then use a client-supported installer or the bundled explicit-target installer.
@@ -80,7 +82,7 @@ Prefer a client or operating-system secret store. For a session-only environment
 $secureToken = Read-Host "Yunxiao token" -AsSecureString
 $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
 try {
-  $env:YUNXIAO_ACCESS_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+  $env:ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
 } finally {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
 }
@@ -89,16 +91,16 @@ try {
 ### macOS zsh
 
 ```zsh
-read -s "YUNXIAO_ACCESS_TOKEN?Yunxiao token: "
-export YUNXIAO_ACCESS_TOKEN
+read -s "ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN?Yunxiao token: "
+export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN
 echo
 ```
 
 ### Linux bash
 
 ```bash
-read -r -s -p "Yunxiao token: " YUNXIAO_ACCESS_TOKEN
-export YUNXIAO_ACCESS_TOKEN
+read -r -s -p "Yunxiao token: " ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN
+export ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN
 printf '\n'
 ```
 

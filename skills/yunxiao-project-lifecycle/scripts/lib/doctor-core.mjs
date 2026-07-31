@@ -1,6 +1,8 @@
 import { parseBinding } from "./binding.mjs";
 
 export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management";
+export const PRIMARY_TOKEN_ENV = "ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN";
+export const LEGACY_TOKEN_ENV = "YUNXIAO_ACCESS_TOKEN";
 
 export const REQUIRED_TOOLS = Object.freeze([
   "get_current_user",
@@ -45,6 +47,7 @@ function createResult({
   platform,
   bindingStatus,
   tokenPresent = false,
+  tokenSource = null,
   missing = [],
   regionConfigured = false,
 }) {
@@ -60,6 +63,7 @@ function createResult({
     },
     token: {
       present: tokenPresent,
+      source: tokenSource,
     },
     binding: {
       status: bindingStatus,
@@ -69,6 +73,22 @@ function createResult({
       missing,
     },
   };
+}
+
+function inspectTokenEnvironment(env) {
+  const primary = env[PRIMARY_TOKEN_ENV];
+  const legacy = env[LEGACY_TOKEN_ENV];
+
+  if (primary && legacy && primary !== legacy) {
+    return { conflict: true, present: true, source: null, value: null };
+  }
+  if (primary) {
+    return { conflict: false, present: true, source: PRIMARY_TOKEN_ENV, value: primary };
+  }
+  if (legacy) {
+    return { conflict: false, present: true, source: LEGACY_TOKEN_ENV, value: legacy };
+  }
+  return { conflict: false, present: false, source: null, value: null };
 }
 
 function validateRegionBaseUrl(rawValue) {
@@ -254,13 +274,15 @@ export async function runDoctor({
   timeoutMs = 15_000,
 } = {}) {
   const binding = inspectBinding(bindingText);
+  const tokenEnvironment = inspectTokenEnvironment(env);
 
   if (!SUPPORTED_PLATFORMS.has(platform)) {
     return createResult({
       status: "UNSUPPORTED_PLATFORM",
       platform,
       bindingStatus: binding.status,
-      tokenPresent: Boolean(env.YUNXIAO_ACCESS_TOKEN),
+      tokenPresent: tokenEnvironment.present,
+      tokenSource: tokenEnvironment.source,
     });
   }
 
@@ -272,17 +294,30 @@ export async function runDoctor({
       status: error.status,
       platform,
       bindingStatus: binding.status,
-      tokenPresent: Boolean(env.YUNXIAO_ACCESS_TOKEN),
+      tokenPresent: tokenEnvironment.present,
+      tokenSource: tokenEnvironment.source,
     });
   }
 
-  const token = env.YUNXIAO_ACCESS_TOKEN;
+  if (tokenEnvironment.conflict) {
+    return createResult({
+      status: "CONFIG_ERROR",
+      platform,
+      bindingStatus: binding.status,
+      tokenPresent: true,
+      tokenSource: null,
+      regionConfigured: Boolean(regionBaseUrl),
+    });
+  }
+
+  const token = tokenEnvironment.value;
   if (!token) {
     return createResult({
       status: "TOKEN_MISSING",
       platform,
       bindingStatus: binding.status,
       tokenPresent: false,
+      tokenSource: null,
       regionConfigured: Boolean(regionBaseUrl),
     });
   }
@@ -292,6 +327,7 @@ export async function runDoctor({
       platform,
       bindingStatus: binding.status,
       tokenPresent: true,
+      tokenSource: tokenEnvironment.source,
       regionConfigured: Boolean(regionBaseUrl),
     });
   }
@@ -302,6 +338,7 @@ export async function runDoctor({
       platform,
       bindingStatus: binding.status,
       tokenPresent: true,
+      tokenSource: tokenEnvironment.source,
       regionConfigured: Boolean(regionBaseUrl),
     });
   }
@@ -326,6 +363,7 @@ export async function runDoctor({
         platform,
         bindingStatus: binding.status,
         tokenPresent: true,
+        tokenSource: tokenEnvironment.source,
         missing,
         regionConfigured: Boolean(regionBaseUrl),
       });
@@ -351,6 +389,7 @@ export async function runDoctor({
         platform,
         bindingStatus: binding.status,
         tokenPresent: true,
+        tokenSource: tokenEnvironment.source,
         regionConfigured: Boolean(regionBaseUrl),
       });
     }
@@ -380,6 +419,7 @@ export async function runDoctor({
       platform,
       bindingStatus: "VERIFIED",
       tokenPresent: true,
+      tokenSource: tokenEnvironment.source,
       regionConfigured: Boolean(regionBaseUrl),
     });
   } catch (error) {
@@ -389,6 +429,7 @@ export async function runDoctor({
       platform,
       bindingStatus: status === "BINDING_INVALID" ? "BINDING_INVALID" : binding.status,
       tokenPresent: true,
+      tokenSource: tokenEnvironment.source,
       regionConfigured: Boolean(regionBaseUrl),
     });
   }

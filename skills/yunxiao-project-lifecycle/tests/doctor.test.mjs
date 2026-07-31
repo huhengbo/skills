@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 import {
   DEFAULT_MCP_URL,
+  LEGACY_TOKEN_ENV,
+  PRIMARY_TOKEN_ENV,
   REQUIRED_TOOLS,
   runDoctor,
 } from "../scripts/lib/doctor-core.mjs";
@@ -91,6 +93,7 @@ test("reports TOKEN_MISSING without making a request", async () => {
   });
 
   assert.equal(result.status, "TOKEN_MISSING");
+  assert.equal(result.token.source, null);
   assert.equal(result.writeReady, false);
   assert.equal(called, false);
   assert.equal(JSON.stringify(result).includes("Authorization"), false);
@@ -100,22 +103,75 @@ test("rejects malformed tokens without making a request", async () => {
   for (const token of [" leading-space", "trailing-space ", "line\nbreak"]) {
     let called = false;
     const result = await runDoctor({
-      env: { YUNXIAO_ACCESS_TOKEN: token },
+      env: { [PRIMARY_TOKEN_ENV]: token },
       platform: "linux",
       fetchImpl: async () => { called = true; throw new Error("unexpected"); },
       bindingText: BINDING,
     });
     assert.equal(result.status, "TOKEN_INVALID");
     assert.equal(result.token.present, true);
+    assert.equal(result.token.source, PRIMARY_TOKEN_ENV);
     assert.equal(called, false);
     assert.equal(JSON.stringify(result).includes(token), false);
   }
 });
 
+test("prefers the primary token environment and accepts the legacy alias", async () => {
+  for (const [env, expectedSource] of [
+    [{ [PRIMARY_TOKEN_ENV]: "secret" }, PRIMARY_TOKEN_ENV],
+    [{ [LEGACY_TOKEN_ENV]: "secret" }, LEGACY_TOKEN_ENV],
+    [{ [PRIMARY_TOKEN_ENV]: "secret", [LEGACY_TOKEN_ENV]: "secret" }, PRIMARY_TOKEN_ENV],
+  ]) {
+    const result = await runDoctor({
+      env,
+      platform: "linux",
+      fetchImpl: successfulFetch(),
+      bindingText: null,
+    });
+
+    assert.equal(result.status, "BINDING_MISSING");
+    assert.equal(result.token.source, expectedSource);
+  }
+});
+
+test("rejects conflicting token aliases without making a request", async () => {
+  let called = false;
+  const result = await runDoctor({
+    env: {
+      [PRIMARY_TOKEN_ENV]: "primary-secret",
+      [LEGACY_TOKEN_ENV]: "different-legacy-secret",
+    },
+    platform: "linux",
+    fetchImpl: async () => { called = true; throw new Error("unexpected"); },
+    bindingText: BINDING,
+  });
+
+  assert.equal(result.status, "CONFIG_ERROR");
+  assert.equal(result.token.present, true);
+  assert.equal(result.token.source, null);
+  assert.equal(result.writeReady, false);
+  assert.equal(called, false);
+  assert.doesNotMatch(JSON.stringify(result), /primary-secret|different-legacy-secret/);
+});
+
+test("does not treat a global organization variable as project binding", async () => {
+  let called = false;
+  const result = await runDoctor({
+    env: { ALIBABA_CLOUD_YUNXIAO_ORGANIZATION_ID: "global-org" },
+    platform: "linux",
+    fetchImpl: async () => { called = true; throw new Error("unexpected"); },
+    bindingText: null,
+  });
+
+  assert.equal(result.status, "TOKEN_MISSING");
+  assert.equal(result.binding.status, "BINDING_MISSING");
+  assert.equal(called, false);
+});
+
 test("rejects unsupported platforms without making a request", async () => {
   let called = false;
   const result = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
     platform: "freebsd",
     fetchImpl: async () => { called = true; throw new Error("unexpected"); },
     bindingText: BINDING,
@@ -123,6 +179,7 @@ test("rejects unsupported platforms without making a request", async () => {
 
   assert.equal(result.status, "UNSUPPORTED_PLATFORM");
   assert.equal(result.token.present, true);
+  assert.equal(result.token.source, PRIMARY_TOKEN_ENV);
   assert.equal(called, false);
 });
 
@@ -135,7 +192,7 @@ test("does not claim a token exists when an earlier platform check fails", async
 test("maps authentication and permission failures", async () => {
   for (const [httpStatus, expected] of [[401, "AUTH_FAILED"], [403, "PERMISSION_DENIED"]]) {
     const result = await runDoctor({
-      env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+      env: { [PRIMARY_TOKEN_ENV]: "secret" },
       platform: "win32",
       fetchImpl: async () => jsonResponse({}, httpStatus),
       bindingText: BINDING,
@@ -154,7 +211,7 @@ test("maps endpoint, rate limit, server, and transport failures", async () => {
 
   for (const [fetchImpl, expected] of cases) {
     const result = await runDoctor({
-      env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+      env: { [PRIMARY_TOKEN_ENV]: "secret" },
       platform: "darwin",
       fetchImpl,
       bindingText: BINDING,
@@ -167,7 +224,7 @@ test("rejects invalid Region base URLs before making a request", async () => {
   let called = false;
   const result = await runDoctor({
     env: {
-      YUNXIAO_ACCESS_TOKEN: "secret",
+      [PRIMARY_TOKEN_ENV]: "secret",
       YUNXIAO_API_BASE_URL: "http://evil.example.com",
     },
     platform: "linux",
@@ -181,7 +238,7 @@ test("rejects invalid Region base URLs before making a request", async () => {
 
 test("reports invalid and missing bindings separately", async () => {
   const invalid = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
     platform: "linux",
     fetchImpl: successfulFetch(),
     bindingText: "schema_version = 2",
@@ -189,7 +246,7 @@ test("reports invalid and missing bindings separately", async () => {
   assert.equal(invalid.status, "BINDING_INVALID");
 
   const missing = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
     platform: "linux",
     fetchImpl: successfulFetch(),
     bindingText: null,
@@ -202,7 +259,7 @@ test("reports invalid and missing bindings separately", async () => {
 
 test("reports missing required MCP capabilities", async () => {
   const result = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
     platform: "linux",
     fetchImpl: successfulFetch({ missingTools: ["create_work_item"] }),
     bindingText: BINDING,
@@ -217,7 +274,7 @@ test("reaches READY for JSON and SSE MCP responses", async () => {
     const calls = [];
     const result = await runDoctor({
       env: {
-        YUNXIAO_ACCESS_TOKEN: "secret-value-that-must-never-leak",
+        [PRIMARY_TOKEN_ENV]: "secret-value-that-must-never-leak",
         YUNXIAO_API_BASE_URL: "https://example.devops.aliyuncs.com",
       },
       platform: "darwin",
@@ -247,7 +304,7 @@ test("rejects a remote project mismatch or stale display snapshot", async () => 
     { id: "project-1", name: "Renamed Project" },
   ]) {
     const result = await runDoctor({
-      env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+      env: { [PRIMARY_TOKEN_ENV]: "secret" },
       platform: "linux",
       fetchImpl: successfulFetch({ project }),
       bindingText: BINDING,
@@ -262,7 +319,7 @@ test("rejects a remote project mismatch or stale display snapshot", async () => 
 test("verifies a configured project code and rejects remote lookup errors", async () => {
   const bindingWithCode = `${BINDING}custom_code = "DEMO"\n`;
   const staleCode = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
     platform: "linux",
     fetchImpl: successfulFetch({ project: { id: "project-1", name: "Project", customCode: "OTHER" } }),
     bindingText: bindingWithCode,
@@ -270,7 +327,7 @@ test("verifies a configured project code and rejects remote lookup errors", asyn
   assert.equal(staleCode.status, "BINDING_INVALID");
 
   const lookupError = await runDoctor({
-    env: { YUNXIAO_ACCESS_TOKEN: "secret" },
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
     platform: "linux",
     fetchImpl: successfulFetch({ projectError: true }),
     bindingText: BINDING,
@@ -288,7 +345,8 @@ test("CLI help is client-neutral", () => {
 test("CLI emits redacted JSON for a missing token", async () => {
   const projectRoot = await mkdtemp(path.join(tmpdir(), "yunxiao-doctor-"));
   const env = { ...process.env };
-  delete env.YUNXIAO_ACCESS_TOKEN;
+  delete env[PRIMARY_TOKEN_ENV];
+  delete env[LEGACY_TOKEN_ENV];
   delete env.YUNXIAO_API_BASE_URL;
   const result = spawnSync(process.execPath, [DOCTOR_CLI, "--json", "--project-root", projectRoot], {
     encoding: "utf8",
