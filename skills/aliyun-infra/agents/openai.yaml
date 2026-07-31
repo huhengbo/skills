@@ -1,4 +1,4 @@
 interface:
-  display_name: "Aliyun Infra Ops"
-  short_description: "Safe Aliyun CLI ops, including SMS workflows"
-  default_prompt: "Use $aliyun-infra to inspect or change Alibaba Cloud resources, including SMS workflows, with profile, region, and confirmation checks."
+  display_name: "Aliyun Infrastructure Ops"
+  short_description: "Safe Aliyun CLI operations, CAS, OSS and TLS"
+  default_prompt: "Use $aliyun-infra to safely request or renew an Aliyun SSL certificate, deploy an existing certificate to OSS, or verify public TLS."

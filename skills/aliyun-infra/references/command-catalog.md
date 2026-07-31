@@ -39,10 +39,33 @@ aliyun ecs StopInstance --InstanceId <instanceId> --RegionId <region> --profile 
 aliyun ecs RebootInstance --InstanceId <instanceId> --RegionId <region> --profile <profile>
 ```
 
-## OSS
+## OSS (ossutil v2)
+`aliyun oss` is a deprecated compatibility command. Use `aliyun ossutil`; its profiles come from its own configuration file, normally `~/.ossutilconfig`, rather than automatically from `aliyun configure`.
+
 ```bash
-aliyun oss ls --profile <profile>
-aliyun oss ls oss://<bucket>/<path>/ --profile <profile>
+aliyun ossutil version
+aliyun ossutil config list-profiles
+aliyun ossutil ls --profile <ossutilProfile>
+aliyun ossutil ls oss://<bucket>/<path>/ --profile <ossutilProfile>
+```
+
+Before creating or changing an ossutil profile, identify the target account and configuration file, display a redacted planned command, and obtain confirmation. Never print the configuration file or pass access keys on a command line.
+
+## CAS (SSL Certificate Management)
+Read `references/cas-oss-certificates.md` before using a certificate command. Do not print raw responses from certificate-detail APIs.
+
+```bash
+aliyun cas ListUserCertificateOrder --OrderType CERT --Keyword <domain> --CurrentPage 1 --ShowSize 50 --profile <casProfile>
+aliyun cas RenewCertificateOrderForPackageRequest --OrderId <orderId> --profile <casProfile>
+aliyun cas DescribeCertificateState --OrderId <orderId> --profile <casProfile>
+aliyun cas GetCertificateDetail --CertificateId <certificateId> --profile <casProfile>
+aliyun cas GetUserCertificateDetail --CertId <certificateId> --CertFilter true --profile <casProfile>
+aliyun cas ListContact --CurrentPage 1 --ShowSize 50 --profile <casProfile>
+aliyun cas ListCloudResources --CloudProduct OSS --Keyword <customDomain> --CurrentPage 1 --ShowSize 50 --profile <casProfile>
+aliyun cas CreateDeploymentJob --CertIds <certificateId> --ContactIds <contactId> --JobType OSS --Name <deploymentName> --ResourceIds <resourceId> --profile <casProfile>
+aliyun cas DescribeDeploymentJob --JobId <jobId> --profile <casProfile>
+aliyun cas DescribeDeploymentJobStatus --JobId <jobId> --profile <casProfile>
+aliyun cas ListWorkerResource --JobId <jobId> --CloudProduct OSS --CurrentPage 1 --ShowSize 50 --profile <casProfile>
 ```
 
 ## CDN
@@ -106,3 +129,5 @@ For mutating operations, always:
 3. Ask for explicit confirmation.
 
 For SMS send operations, additionally confirm recipients, signature, template, template params, and billable external communication impact.
+
+For certificate application, renewal, DNS validation, deployment, rollback, or deletion, load `references/cas-oss-certificates.md` and confirm the exact domain, product, validation record, certificate ID, resource ID, and cloud product before executing.
