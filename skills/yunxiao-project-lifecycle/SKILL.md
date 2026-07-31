@@ -30,7 +30,7 @@ Resolve organization and project IDs only from the repository-root `yunxiao.toml
 
 ## Execute lifecycle work
 
-For every allowed single-object write:
+For every allowed single-object write, including each item in an explicitly authorized ordered set:
 
 1. Read the current object and bound project.
 2. Validate explicit user intent, required fields, duplicate candidates, target identity, and workflow legality.
@@ -46,7 +46,8 @@ Directly execute explicit single-object creation, assignment, comment, field upd
 - Never choose the first same-name project, member, type, sprint, version, or work item.
 - Never retry an uncertain write until a read confirms that the side effect did not occur.
 - Never hide partial success, permission failures, MCP errors, or post-write mismatches.
-- Do not execute batch writes, deletions, true archival, or scheduled writes in v1. Do not substitute deletion or a completed status for archival.
+- Do not use bulk-write APIs or infer a multi-object scope. An explicitly authorized ordered set of no more than 20 uniquely identified objects may be processed sequentially under the bounded multi-write protocol in the lifecycle policy.
+- Do not execute deletions, true archival, or scheduled writes in v1. Do not substitute deletion or a completed status for archival.
 - Keep automation read-only unless a separate automation policy explicitly authorizes a bounded write scope.
 - Redact tokens, authorization headers, cookies, personal data not needed for the result, and internal error payloads that may contain secrets.
 

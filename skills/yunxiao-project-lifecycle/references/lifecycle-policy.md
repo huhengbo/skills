@@ -28,7 +28,8 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 | Update one field or perform one legal status transition | Execute after current-object and workflow validation |
 | Create/update one sprint or version | Execute when dates, owner, bound project, and intended semantics are explicit |
 | Analyze, summarize, inspect, plan, triage, recommend | Read only; never infer a write |
-| Batch create/update, delete, true archive, scheduled write | Reject in v1 with zero write calls |
+| Explicitly authorized bounded multi-object update | Execute sequentially for at most 20 uniquely identified objects when every object receives the same explicit field change; pre-read and post-read each object, stop on the first failure, and report partial results |
+| Bulk API write, inferred/open-ended batch, mixed-operation batch, batch create, delete, true archive, scheduled write | Reject in v1 with zero write calls |
 
 ## Single-write protocol
 
@@ -40,6 +41,19 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 6. Submit one write call; never issue concurrent writes for the same logical change.
 7. Read the same object and compare the fields requested by the user.
 8. Return one result state and enough non-secret context to audit it.
+
+## Bounded multi-write protocol
+
+Use this protocol only when the user explicitly identifies every target and requests the same unambiguous update for all targets.
+
+1. Limit the ordered set to 20 objects and resolve every target to exactly one stable ID before the first write.
+2. Validate the organization, project, member, requested field, and scope once, then pre-read each target immediately before its write.
+3. Submit one ordinary single-object write at a time. Never use a bulk endpoint or concurrent writes.
+4. Post-read and verify each object before moving to the next.
+5. Stop immediately on rejection, failure, uncertainty, or verification mismatch. Never compensate or roll back earlier verified writes automatically.
+6. Report each object as `VERIFIED_SUCCESS`, `SUBMITTED_UNVERIFIED`, `REJECTED`, or `FAILED`, and state clearly when only a prefix of the ordered set was completed.
+
+Reject with zero writes when targets are inferred from a broad query such as “all defects,” the objects need different changes, any target is ambiguous, the set exceeds 20, or the user has not explicitly authorized the full set.
 
 ## Creation rules
 
