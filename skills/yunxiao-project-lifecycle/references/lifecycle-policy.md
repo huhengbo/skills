@@ -9,6 +9,10 @@ Use verified equivalent capabilities when a client presents names differently. T
 | Current identity and organizations | `get_current_user`, `get_current_organization_info`, `get_user_organizations` |
 | Projects | `search_projects`, `get_project` |
 | Members | `search_organization_members`, `get_organization_member_info_by_user_id` |
+| Code repositories | `list_repositories`, `get_repository` |
+| Branches and files | `list_branches`, `get_branch`, `create_branch`, `list_files`, `get_file_blobs`, `create_file`, `update_file` |
+| Commits and comparison | `list_commits`, `get_commit`, `get_compare` |
+| Merge requests | `list_change_requests`, `get_change_request`, `create_change_request`, `create_change_request_comment`, `review_change_request`, `merge_change_request` |
 | Work items | `search_workitems`, `get_work_item`, `create_work_item`, `update_work_item` |
 | Types and workflows | `list_work_item_types`, `get_work_item_type`, `get_work_item_workflow` |
 | Comments and activity | `list_work_item_comments`, `create_work_item_comment`, `list_workitem_activities` |
@@ -22,6 +26,10 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 | Action | v1 decision |
 |---|---|
 | Read projects, members, requirements, defects, tasks, comments, activity, sprints, versions | Execute after read-only capability/auth checks |
+| Read repositories, branches, files, commits, comparisons, and merge requests | Execute after the request-specific `code-management` capability/auth checks |
+| Create one branch, file change, or merge request | Execute when the user explicitly requests it, targets are unique, required fields exist, and duplicate/branch checks pass |
+| Comment on, review, or merge one merge request | Execute only for an explicit target and action after reading its current state; the merge type must be explicit and source-branch deletion remains disabled in v1 |
+| Manage one repository member | Execute only when a verified repository-membership tool contract exists; otherwise reject with `CAPABILITY_MISSING` |
 | Create one requirement, defect, or task | Execute when the user explicitly requests it, binding/type/assignee are unique, required fields exist, and duplicate check passes |
 | Assign one work item | Execute when the user explicitly requests it and the member is uniquely resolved, enabled, and assignable |
 | Add one comment | Execute when target and content are explicit |
@@ -62,6 +70,14 @@ Reject with zero writes when targets are inferred from a broad query such as “
 - Check active work items in the bound project for the same category and exact normalized title. A candidate duplicate stops creation and is shown to the user.
 - Do not treat a similar title as proof of duplication. Ask when the match is uncertain.
 - Resolve parent, sprint, version, labels, participants, trackers, and verifier only when explicitly requested or defined by a validated project convention.
+
+## Code management rules
+
+- Resolve a repository by explicit stable ID/path or a unique `list_repositories` result. Never select the first same-name repository.
+- Before creating a merge request, read the source and target branches, confirm the comparison contains changes, and check for an existing open request for the same repository and source/target pair.
+- `create_change_request` requires an explicit repository, source branch, target branch, and title. Do not trigger AI review or request source-branch deletion in v1.
+- Before reviewing or merging, read the current merge request. A review decision and merge type are explicit user inputs; do not infer approval or merge from a request to inspect or comment.
+- Organization membership does not establish repository membership. Repository-member add, role-change, and removal operations need their own verified MCP tools and stable member IDs.
 
 ## Assignment and workflow rules
 

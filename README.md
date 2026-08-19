@@ -43,9 +43,9 @@ skills/
   - Access Key based API wrapper for repeatable agent workflows
 
 - `yunxiao-project-lifecycle`
-  - Manage requirements, defects, tasks, assignees, comments, workflows, sprints, versions, and milestones through the official Yunxiao MCP
+  - Manage Codeup repositories, branches, commits, files, merge requests, reviews, and project requirements, defects, tasks, sprints, versions, and milestones through the official Yunxiao MCP
   - Bind a repository to one Yunxiao project through a portable root-level `yunxiao.toml`
-  - Diagnose MCP, authentication, capabilities, and bindings on Windows, macOS, and Linux without storing credentials
+  - Diagnose MCP, authentication, project/code capabilities, and bindings on Windows, macOS, and Linux without storing credentials
 
 ## New Skill Workflow
 1. Initialize skill skeleton with `skill-creator`.

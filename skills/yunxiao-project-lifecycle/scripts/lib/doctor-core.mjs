@@ -1,6 +1,6 @@
 import { parseBinding } from "./binding.mjs";
 
-export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management";
+export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management";
 export const PRIMARY_TOKEN_ENV = "ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN";
 export const LEGACY_TOKEN_ENV = "YUNXIAO_ACCESS_TOKEN";
 
@@ -29,6 +29,24 @@ export const REQUIRED_TOOLS = Object.freeze([
   "get_sprint",
   "create_sprint",
   "update_sprint",
+  "get_repository",
+  "list_repositories",
+  "get_branch",
+  "list_branches",
+  "create_branch",
+  "list_files",
+  "get_file_blobs",
+  "create_file",
+  "update_file",
+  "list_commits",
+  "get_commit",
+  "get_compare",
+  "get_change_request",
+  "list_change_requests",
+  "create_change_request",
+  "create_change_request_comment",
+  "review_change_request",
+  "merge_change_request",
 ]);
 
 const SUPPORTED_PLATFORMS = new Set(["win32", "darwin", "linux"]);

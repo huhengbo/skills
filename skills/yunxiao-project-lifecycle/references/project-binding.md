@@ -86,7 +86,7 @@ Never use the current/last organization, a project name, or recent history as an
 
 When the file is missing:
 
-1. Perform read-only identity, organization, and project discovery.
+1. Perform read-only identity, organization, project, and repository discovery.
 2. Present stable project candidates with display names and codes.
 3. Require the user to select one project explicitly.
 4. Discover optional type and assignee defaults; ask only when multiple candidates materially affect future behavior.

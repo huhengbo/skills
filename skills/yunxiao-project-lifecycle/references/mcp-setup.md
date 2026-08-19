@@ -5,7 +5,7 @@
 Prefer the Alibaba Cloud hosted Yunxiao MCP service:
 
 ```text
-URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management
+URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management
 Transport: Streamable HTTP (stateless)
 Authentication: Authorization: Bearer <ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN>
 ```
@@ -20,11 +20,11 @@ Run these checks in order and stop on the first blocking result:
 
 1. Detect `win32`, `darwin`, or `linux`, Node.js availability, shell, architecture, and proxy environment.
 2. Detect whether the active client supports remote Streamable HTTP MCP and Bearer-token environment references. Inspect verified client capabilities; do not infer configuration from a product name.
-3. Check whether the required Yunxiao organization/project tools are already visible.
+3. Check whether the Yunxiao tools required by the requested action are already visible. Code actions additionally require `code-management` tools.
 4. Check the primary token variable and legacy alias for presence and equality. Never print, hash, summarize, or log either value.
 5. Validate the official HTTPS endpoint, DNS, TLS, proxy path, and response protocol. Never disable certificate validation or follow an untrusted redirect.
 6. Perform a minimal read-only identity call.
-7. List tools and verify capabilities required by the requested action.
+7. List tools and verify capabilities required by the requested action, including repository and merge-request tools for code actions.
 8. When `yunxiao.toml` exists, call `get_project` with its organization/project IDs and compare the returned project ID, name, and code snapshots. Local syntax alone never authorizes writes.
 9. Require a new client process when configuration or environment changed, then repeat the read-only checks.
 
@@ -55,7 +55,7 @@ node scripts/doctor.mjs --project-root <project-root>
 node scripts/doctor.mjs --project-root <project-root> --json
 ```
 
-The script requires Node.js 18+, is read-only, and never modifies an agent config, shell profile, proxy, certificate store, repository, or GUI process. It directly verifies the official MCP service, required tools, token presence, `yunxiao.toml` syntax, and—when a binding exists—the remote project identity and display snapshots. Its JSON `binding.status` is `LOCAL_VALID` until remote verification succeeds and `VERIFIED` afterward; only `VERIFIED` can produce `writeReady: true`. A direct service success does not prove that an already-running GUI client inherited the same environment; validate again from a new client process.
+The script requires Node.js 18+, is read-only, and never modifies an agent config, shell profile, proxy, certificate store, repository, or GUI process. It directly verifies the official MCP service, required project and code-management tools, token presence, `yunxiao.toml` syntax, and—when a binding exists—the remote project identity and display snapshots. Its JSON `binding.status` is `LOCAL_VALID` until remote verification succeeds and `VERIFIED` afterward; only `VERIFIED` can produce `writeReady: true`. A direct service success does not prove that an already-running GUI client inherited the same environment; validate again from a new client process.
 
 ## Client-neutral configuration workflow
 

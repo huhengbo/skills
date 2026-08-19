@@ -269,6 +269,19 @@ test("reports missing required MCP capabilities", async () => {
   assert.deepEqual(result.capabilities.missing, ["create_work_item"]);
 });
 
+test("reports missing Codeup merge-request capability", async () => {
+  const result = await runDoctor({
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
+    platform: "linux",
+    fetchImpl: successfulFetch({ missingTools: ["create_change_request"] }),
+    bindingText: BINDING,
+  });
+
+  assert.equal(result.status, "CAPABILITY_MISSING");
+  assert.deepEqual(result.capabilities.missing, ["create_change_request"]);
+  assert.equal(result.writeReady, false);
+});
+
 test("reaches READY for JSON and SSE MCP responses", async () => {
   for (const sse of [false, true]) {
     const calls = [];
@@ -287,6 +300,7 @@ test("reaches READY for JSON and SSE MCP responses", async () => {
     assert.equal(result.binding.status, "VERIFIED");
     assert.equal(result.architecture, process.arch);
     assert.equal(result.endpoint.url, DEFAULT_MCP_URL);
+    assert.match(DEFAULT_MCP_URL, /code-management/);
     assert.equal(result.endpoint.regionConfigured, true);
     assert.equal(JSON.stringify(result).includes("secret-value"), false);
     assert.equal(JSON.stringify(result).includes("example.devops.aliyuncs.com"), false);
