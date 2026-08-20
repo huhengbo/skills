@@ -11,8 +11,10 @@ Use verified equivalent capabilities when a client presents names differently. T
 | Members | `search_organization_members`, `get_organization_member_info_by_user_id` |
 | Code repositories | `list_repositories`, `get_repository` |
 | Branches and files | `list_branches`, `get_branch`, `create_branch`, `list_files`, `get_file_blobs`, `create_file`, `update_file` |
-| Commits and comparison | `list_commits`, `get_commit`, `get_compare` |
+| Commits and comparison | `list_commits`, `get_commit`, `get_compare` (or the verified equivalent `compare`) |
 | Merge requests | `list_change_requests`, `get_change_request`, `create_change_request`, `create_change_request_comment`, `review_change_request`, `merge_change_request` |
+| Pipelines and runs | `list_pipelines`, `get_pipeline`, `get_latest_pipeline_run`, `list_pipeline_runs`, `get_pipeline_run` |
+| Pipeline tasks and logs | `list_pipeline_jobs_by_category`, `list_pipeline_job_historys`, `get_pipeline_job_run_log` |
 | Work items | `search_workitems`, `get_work_item`, `create_work_item`, `update_work_item` |
 | Types and workflows | `list_work_item_types`, `get_work_item_type`, `get_work_item_workflow` |
 | Comments and activity | `list_work_item_comments`, `create_work_item_comment`, `list_workitem_activities` |
@@ -27,6 +29,9 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 |---|---|
 | Read projects, members, requirements, defects, tasks, comments, activity, sprints, versions | Execute after read-only capability/auth checks |
 | Read repositories, branches, files, commits, comparisons, and merge requests | Execute after the request-specific `code-management` capability/auth checks |
+| Read pipelines, pipeline details, runs, tasks, and logs | Execute after the request-specific `pipeline-management` capability/auth checks and stable target resolution |
+| Trigger/retry/cancel a pipeline or execute a pipeline task | Reject in the minimal pipeline scope; do not substitute another API client |
+| Create/update/delete pipeline definitions, resources, tags, or deployments | Reject in the minimal pipeline scope; do not substitute another API client |
 | Create one branch, file change, or merge request | Execute when the user explicitly requests it, targets are unique, required fields exist, and duplicate/branch checks pass |
 | Comment on, review, or merge one merge request | Execute only for an explicit target and action after reading its current state; the merge type must be explicit and source-branch deletion remains disabled in v1 |
 | Manage one repository member | Execute only when a verified repository-membership tool contract exists; otherwise reject with `CAPABILITY_MISSING` |

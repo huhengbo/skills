@@ -1,6 +1,6 @@
 import { parseBinding } from "./binding.mjs";
 
-export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management";
+export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management";
 export const PRIMARY_TOKEN_ENV = "ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN";
 export const LEGACY_TOKEN_ENV = "YUNXIAO_ACCESS_TOKEN";
 
@@ -47,7 +47,19 @@ export const REQUIRED_TOOLS = Object.freeze([
   "create_change_request_comment",
   "review_change_request",
   "merge_change_request",
+  "list_pipelines",
+  "get_pipeline",
+  "get_latest_pipeline_run",
+  "list_pipeline_runs",
+  "get_pipeline_run",
+  "list_pipeline_jobs_by_category",
+  "list_pipeline_job_historys",
+  "get_pipeline_job_run_log",
 ]);
+
+export const TOOL_ALIASES = Object.freeze({
+  get_compare: Object.freeze(["compare"]),
+});
 
 const SUPPORTED_PLATFORMS = new Set(["win32", "darwin", "linux"]);
 const REGION_HOST = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.devops\.aliyuncs\.com$/i;
@@ -284,6 +296,15 @@ function verifyProjectBinding(binding, response) {
   }
 }
 
+function findMissingTools(available) {
+  return REQUIRED_TOOLS.filter((name) => {
+    if (available.has(name)) {
+      return false;
+    }
+    return !(TOOL_ALIASES[name] ?? []).some((alias) => available.has(alias));
+  });
+}
+
 export async function runDoctor({
   env = process.env,
   platform = process.platform,
@@ -374,7 +395,7 @@ export async function runDoctor({
     }
 
     const available = new Set(toolsResponse.result.tools.map((tool) => tool.name));
-    const missing = REQUIRED_TOOLS.filter((name) => !available.has(name));
+    const missing = findMissingTools(available);
     if (missing.length > 0) {
       return createResult({
         status: "CAPABILITY_MISSING",

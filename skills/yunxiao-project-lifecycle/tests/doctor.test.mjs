@@ -35,6 +35,7 @@ function jsonResponse(body, status = 200) {
 
 function successfulFetch({
   missingTools = [],
+  aliases = [],
   sse = false,
   project = { id: "project-1", name: "Project" },
   projectError = false,
@@ -58,6 +59,7 @@ function successfulFetch({
       const tools = REQUIRED_TOOLS
         .filter((name) => !missingTools.includes(name))
         .map((name) => ({ name }));
+      tools.push(...aliases.map((name) => ({ name })));
       const payload = { jsonrpc: "2.0", id: request.id, result: { tools } };
       return respond(payload);
     }
@@ -282,6 +284,31 @@ test("reports missing Codeup merge-request capability", async () => {
   assert.equal(result.writeReady, false);
 });
 
+test("reports missing pipeline-management capability", async () => {
+  const result = await runDoctor({
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
+    platform: "linux",
+    fetchImpl: successfulFetch({ missingTools: ["list_pipeline_runs"] }),
+    bindingText: BINDING,
+  });
+
+  assert.equal(result.status, "CAPABILITY_MISSING");
+  assert.deepEqual(result.capabilities.missing, ["list_pipeline_runs"]);
+  assert.equal(result.writeReady, false);
+});
+
+test("accepts a verified comparison-tool alias", async () => {
+  const result = await runDoctor({
+    env: { [PRIMARY_TOKEN_ENV]: "secret" },
+    platform: "linux",
+    fetchImpl: successfulFetch({ missingTools: ["get_compare"], aliases: ["compare"] }),
+    bindingText: BINDING,
+  });
+
+  assert.equal(result.status, "READY");
+  assert.deepEqual(result.capabilities.missing, []);
+});
+
 test("reaches READY for JSON and SSE MCP responses", async () => {
   for (const sse of [false, true]) {
     const calls = [];
@@ -301,6 +328,7 @@ test("reaches READY for JSON and SSE MCP responses", async () => {
     assert.equal(result.architecture, process.arch);
     assert.equal(result.endpoint.url, DEFAULT_MCP_URL);
     assert.match(DEFAULT_MCP_URL, /code-management/);
+    assert.match(DEFAULT_MCP_URL, /pipeline-management/);
     assert.equal(result.endpoint.regionConfigured, true);
     assert.equal(JSON.stringify(result).includes("secret-value"), false);
     assert.equal(JSON.stringify(result).includes("example.devops.aliyuncs.com"), false);

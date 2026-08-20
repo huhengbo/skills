@@ -5,7 +5,7 @@
 Prefer the Alibaba Cloud hosted Yunxiao MCP service:
 
 ```text
-URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management
+URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management
 Transport: Streamable HTTP (stateless)
 Authentication: Authorization: Bearer <ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN>
 ```

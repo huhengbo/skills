@@ -1,13 +1,13 @@
 ---
 name: yunxiao-project-lifecycle
-description: Manage Alibaba Cloud Yunxiao (云效) project and Codeup repository lifecycles through the official MCP, including repositories, branches, commits, files, merge requests, reviews, project work items, sprints, versions, and milestones. Use when a request concerns Yunxiao project binding or lifecycle work such as 需求、缺陷、工作项、代码库、分支、合并请求、迭代、版本、里程碑、分配、归档, query, create, update, review, merge, triage, or automation; also use to install, configure, or diagnose the Yunxiao MCP integration and yunxiao.toml.
+description: Manage Alibaba Cloud Yunxiao (云效) project, Codeup repository, and Flow pipeline lifecycles through the official MCP, including repositories, branches, commits, files, merge requests, reviews, project work items, sprints, versions, milestones, pipelines, pipeline runs, task history, and task logs. Use when a request concerns Yunxiao project binding or lifecycle work such as 需求、缺陷、工作项、代码库、分支、合并请求、流水线、运行记录、日志、迭代、版本、里程碑、分配、归档, query, create, update, review, merge, triage, or automation; also use to install, configure, or diagnose the Yunxiao MCP integration and yunxiao.toml.
 ---
 
 # Yunxiao Project Lifecycle
 
 ## Start every task
 
-1. Detect whether the active environment exposes the official Yunxiao MCP capabilities needed by the request. Code actions require the `code-management` capability; repository-member writes require a separately verified repository-membership capability. Do not assume a client name, installation directory, server alias, or tool namespace.
+1. Detect whether the active environment exposes the official Yunxiao MCP capabilities needed by the request. Code actions require the `code-management` capability; pipeline queries require the `pipeline-management` capability; repository-member writes require a separately verified repository-membership capability. Do not assume a client name, installation directory, server alias, or tool namespace.
 2. If capabilities or authentication are missing, stop all Yunxiao writes and follow [MCP setup](references/mcp-setup.md). Resolve paths from this `SKILL.md` directory and run `node <this-skill-directory>/scripts/doctor.mjs --project-root <project-root>` when Node.js 18+ is available.
 3. Resolve the project root and read `<project-root>/yunxiao.toml`. Follow [project binding](references/project-binding.md). Without a valid binding, allow organization/project/repository discovery only; never guess a write target.
 4. Read [lifecycle policy](references/lifecycle-policy.md) before any create or update operation.
@@ -23,7 +23,8 @@ Resolve organization and project IDs only from the repository-root `yunxiao.toml
 ## Resolve context and targets
 
 - Prefer an explicit user-selected target, then a validated default from `yunxiao.toml`, then dynamic discovery.
-- Resolve repository, branch, merge-request, work-item, and other names to current stable IDs. Zero or multiple matches require user selection.
+- Resolve repository, branch, merge-request, work-item, pipeline, pipeline-run, and other names to current stable IDs. Zero or multiple matches require user selection.
+- For a pipeline run or task log, bind the request to a unique pipeline ID plus run/job ID. Use a latest-run lookup only when the user explicitly asks for the latest run.
 - Revalidate configured work-item types against the bound project and configured assignees against the organization before use.
 - Resolve status transitions from the current workflow. Never reuse static status IDs from another project.
 - Treat versions as release milestones only when that matches the bound project's convention. Never equate completion, release, deletion, and archival.
@@ -40,6 +41,8 @@ For every allowed single-object write, including each item in an explicitly auth
 
 Directly execute explicit single-object branch/file change, merge-request creation, review/comment, assignment, field update, and legal status-transition requests when all checks pass. Do not infer writes from requests to analyze, summarize, inspect, plan, or recommend.
 
+Pipeline list, detail, run-history, task-history, and log requests are read-only. Execute them only after the `pipeline-management` capability and each requested tool's input contract are verified; do not infer a trigger, retry, cancellation, deployment, or configuration change from a read request.
+
 ## Hard safety rules
 
 - Never write without a unique, remotely verified organization and project binding.
@@ -50,6 +53,7 @@ Directly execute explicit single-object branch/file change, merge-request creati
 - Do not use bulk-write APIs or infer a multi-object scope. An explicitly authorized ordered set of no more than 20 uniquely identified objects may be processed sequentially under the bounded multi-write protocol in the lifecycle policy.
 - Do not use organization-member tools as a substitute for repository-member permission tools.
 - Do not execute deletions, true archival, or scheduled writes in v1. Do not substitute deletion or a completed status for archival.
+- Do not trigger, retry, cancel, create, update, or delete pipeline runs or pipeline definitions in the minimal pipeline scope. Do not expose raw pipeline logs when they contain token, cookie, authorization, or other secret-like values; redact those values while preserving the relevant failure context.
 - Keep automation read-only unless a separate automation policy explicitly authorizes a bounded write scope.
 - Redact tokens, authorization headers, cookies, personal data not needed for the result, and internal error payloads that may contain secrets.
 
@@ -58,6 +62,14 @@ Directly execute explicit single-object branch/file change, merge-request creati
 - For a merge request, require an explicit repository, source branch, target branch, and title; read both branches, check for changes, and check for an existing open request before creating one.
 - For review or merge, read the current request first. The review decision and merge type must be explicit; source-branch deletion remains disabled by the v1 deletion rule.
 - For repository-member operations, execute only when the active MCP exposes and the request-specific contract verifies repository membership and role operations. Otherwise report `CAPABILITY_MISSING` without a fallback API call.
+
+## Pipeline management
+
+- For a pipeline list or search, use `list_pipelines` or another verified pipeline-list tool and require a unique stable ID before reading a named pipeline.
+- For pipeline details, use `get_pipeline` after resolving the pipeline ID. Do not assume a pipeline is project-scoped when the tool contract requires an organization ID and pipeline ID.
+- For run status and history, use `get_latest_pipeline_run`, `list_pipeline_runs`, or `get_pipeline_run` according to the user's requested scope. Do not replace a requested run ID with the latest run.
+- For task history and logs, use `list_pipeline_jobs_by_category`, `list_pipeline_job_historys`, and `get_pipeline_job_run_log` only after resolving the exact pipeline, run, and job identifiers required by the active tool contract.
+- The minimal scope does not authorize `create_pipeline_run`, `execute_pipeline_job_run`, pipeline configuration changes, resource/tag changes, or deployment operations. Report those as unsupported by the current skill policy without using a second API client.
 
 ## Install a downloaded copy
 
