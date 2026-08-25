@@ -13,8 +13,16 @@ Use verified equivalent capabilities when a client presents names differently. T
 | Branches and files | `list_branches`, `get_branch`, `create_branch`, `list_files`, `get_file_blobs`, `create_file`, `update_file` |
 | Commits and comparison | `list_commits`, `get_commit`, `get_compare` (or the verified equivalent `compare`) |
 | Merge requests | `list_change_requests`, `get_change_request`, `create_change_request`, `create_change_request_comment`, `review_change_request`, `merge_change_request` |
-| Pipelines and runs | `list_pipelines`, `get_pipeline`, `get_latest_pipeline_run`, `list_pipeline_runs`, `get_pipeline_run` |
-| Pipeline tasks and logs | `list_pipeline_jobs_by_category`, `list_pipeline_job_historys`, `get_pipeline_job_run_log` |
+| Pipelines and runs | `list_pipelines`, `get_pipeline`, `create_pipeline_from_description`, `update_pipeline`, `create_pipeline_run`, `get_latest_pipeline_run`, `list_pipeline_runs`, `get_pipeline_run` |
+| Pipeline tasks and logs | `list_pipeline_jobs_by_category`, `list_pipeline_job_historys`, `get_pipeline_job_run_log`, `get_pipeline_job_steps`, `get_pipeline_job_step_log` |
+| Pipeline task controls | `execute_pipeline_job_run`, `stop_pipeline_job_run`, `retry_pipeline_job_run`, `rerun_pipeline_job_run`, `skip_pipeline_job_run`, `execute_pipeline_job_action` |
+| Pipeline resources and variable groups | `list_resource_members`, `create_resource_member`, `update_resource_member`, `delete_resource_member`, `update_resource_owner`, `create_flow_variable_group`, `update_flow_variable_group`, `delete_flow_variable_group` |
+| Package repositories and artifacts | `list_package_repositories`, `list_artifacts`, `get_artifact` |
+| Applications | `list_applications`, `get_application`, `create_application`, `update_application` |
+| Application tags | `create_app_tag`, `update_app_tag`, `search_app_tags`, `update_app_tag_bind` |
+| Application orchestration and variables | `list_app_orchestration`, `get_app_orchestration`, `create_app_orchestration`, `delete_app_orchestration`, `update_app_orchestration`, `get_variable_group`, `create_variable_group`, `update_variable_group`, `delete_variable_group` |
+| Application delivery and release | `create_change_order`, `execute_app_release_stage`, `cancel_app_release_stage_execution`, `retry_app_release_stage_pipeline`, `skip_app_release_stage_pipeline`, `pass_app_release_stage_validate`, `refuse_app_release_stage_validate` |
+| Test management | `list_testcase_directories`, `create_testcase_directory`, `create_testcase`, `search_testcases`, `get_testcase`, `delete_testcase`, `list_test_plans`, `get_test_result_list`, `update_test_result`, `get_test_plan_progress`, `list_test_plan_result_directories` |
 | Work items | `search_workitems`, `get_work_item`, `create_work_item`, `update_work_item` |
 | Types and workflows | `list_work_item_types`, `get_work_item_type`, `get_work_item_workflow` |
 | Comments and activity | `list_work_item_comments`, `create_work_item_comment`, `list_workitem_activities` |
@@ -30,8 +38,18 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 | Read projects, members, requirements, defects, tasks, comments, activity, sprints, versions | Execute after read-only capability/auth checks |
 | Read repositories, branches, files, commits, comparisons, and merge requests | Execute after the request-specific `code-management` capability/auth checks |
 | Read pipelines, pipeline details, runs, tasks, and logs | Execute after the request-specific `pipeline-management` capability/auth checks and stable target resolution |
-| Trigger/retry/cancel a pipeline or execute a pipeline task | Reject in the minimal pipeline scope; do not substitute another API client |
-| Create/update/delete pipeline definitions, resources, tags, or deployments | Reject in the minimal pipeline scope; do not substitute another API client |
+| Trigger one pipeline run | Execute only on an explicit request after reading the exact pipeline definition, validating branch/tag and runtime variables, and monitoring the returned run ID |
+| Cancel, execute, retry, rerun, or skip one pipeline job/task | Execute only for the exact pipeline, run, job, and action after the matching control tool and input contract are verified; never infer the action from a read request |
+| Create/update one pipeline definition | Execute only on an explicit request after exact-name/target checks; do not run it implicitly; read back and verify the ID, name, and YAML |
+| Delete one pipeline definition | Execute only if a matching delete tool is visible and the user explicitly names the exact pipeline; the current official catalog has no verified `delete_pipeline`, so otherwise return `CAPABILITY_MISSING` |
+| Manage one resource/member, variable group, or tag | Execute only for an exact resource and user/member/role or variable/tag change using a verified matching tool; read before and after the write |
+| Perform one deployment, rollback, scale, destroy, or release-stage action | Execute only when the user explicitly names the application, environment/target, version or revision, and action; use the matching application-delivery tool and verify the resulting change order or stage state |
+| Read package repositories and artifacts | Execute after `packages-management` capability/auth checks and exact repository/artifact resolution |
+| Create, upload, update, delete, archive, or schedule package content | Return `CAPABILITY_MISSING` unless the active MCP exposes and verifies a matching tool; do not invent a package API |
+| Create/update one application, orchestration, variable group, or application tag | Execute on an explicit request with exact application/resource identity, duplicate checks, and read-back verification |
+| Delete one application orchestration, variable group, or supported application object | Execute only with an explicit target and matching delete tool; verify terminal absence or deleted state |
+| Create/delete one test case or directory, or update one test result | Execute only on an explicit target using the matching `test-management` tool; distinguish result updates from case/plan changes |
+| Delete, true archive, schedule, or automate one object | Execute only under the deletion, archival, schedule, and automation rules below; missing matching tools are `CAPABILITY_MISSING` |
 | Create one branch, file change, or merge request | Execute when the user explicitly requests it, targets are unique, required fields exist, and duplicate/branch checks pass |
 | Comment on, review, or merge one merge request | Execute only for an explicit target and action after reading its current state; the merge type must be explicit and source-branch deletion remains disabled in v1 |
 | Manage one repository member | Execute only when a verified repository-membership tool contract exists; otherwise reject with `CAPABILITY_MISSING` |
@@ -42,7 +60,7 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 | Create/update one sprint or version | Execute when dates, owner, bound project, and intended semantics are explicit |
 | Analyze, summarize, inspect, plan, triage, recommend | Read only; never infer a write |
 | Explicitly authorized bounded multi-object update | Execute sequentially for at most 20 uniquely identified objects when every object receives the same explicit field change; pre-read and post-read each object, stop on the first failure, and report partial results |
-| Bulk API write, inferred/open-ended batch, mixed-operation batch, batch create, delete, true archive, scheduled write | Reject in v1 with zero write calls |
+| Bulk API write, inferred/open-ended batch, mixed-operation batch, or batch create | Reject with zero write calls |
 
 ## Single-write protocol
 
@@ -84,6 +102,33 @@ Reject with zero writes when targets are inferred from a broad query such as “
 - Before reviewing or merging, read the current merge request. A review decision and merge type are explicit user inputs; do not infer approval or merge from a request to inspect or comment.
 - Organization membership does not establish repository membership. Repository-member add, role-change, and removal operations need their own verified MCP tools and stable member IDs.
 
+## Pipeline definition, task, and deployment rules
+
+- Before creating a pipeline, search the bound organization for an exact name match. Any match stops creation; do not overwrite it. Create one definition only, do not run it implicitly, and read back the returned pipeline ID.
+- If `create_pipeline_from_description` cannot express the complete requested YAML, one immediate `update_pipeline` call against that newly returned pipeline ID may finish the same creation request. This is not permission to update another pipeline.
+- Before updating an existing pipeline, resolve one stable pipeline ID and read its current name and YAML. Submit one `update_pipeline` call, then read it again and compare the requested fields.
+- A pipeline run is a separate write. For one explicit run, read the exact definition, validate branch/tag and runtime variables, reject deployment steps unless deployment is separately authorized, call `create_pipeline_run` once, and monitor that returned run ID. A failed run does not authorize an automatic retry.
+- For cancellation or a single task action, require the exact pipeline ID, run ID, job ID, and action. Use only the verified matching control tool. `retry_pipeline_job_run`, `rerun_pipeline_job_run`, and `skip_pipeline_job_run` are explicit actions, not automatic recovery. `rerun_pipeline_job_run` is limited by the active tool contract to supported job types.
+- For resource members, owners, Flow variable groups, tags, or deployment targets, resolve the exact resource type/ID and current state first. Submit one matching write and read the same object or operation status afterward. Never elevate a role, change a target, or deploy a revision from an inferred intent.
+
+## Application delivery, packages, and tests
+
+- Application delivery actions must identify the application plus the relevant orchestration, variable group, tag, environment, change order, release workflow/stage, revision, or deployment target. Deploy, rollback, scale, destroy, stage execution, cancellation, retry, skip, and approval are separate explicit actions.
+- Application creation/update and orchestration, variable-group, and tag changes use exact identity, duplicate checks where applicable, one write, and read-back verification. Application orchestration and variable-group deletion are permitted only through their matching verified delete tools.
+- Package management is currently read-only through `list_package_repositories`, `list_artifacts`, and `get_artifact`. Upload, create, update, delete, archive, retention, and scheduled package writes require a matching tool that is not currently in the official catalog; return `CAPABILITY_MISSING` rather than inventing one.
+- Test management may create directories/cases, delete an exact test case, and update an exact test result when the matching tools are visible. A result update is not a case or test-plan update. Unsupported test-plan create/update/delete/archive, scheduled test writes, and automated test execution remain `CAPABILITY_MISSING` until a matching tool contract is exposed.
+
+## Deletion and archival rules
+
+- Allow one deletion only when the user explicitly names the exact object, the active MCP exposes the matching delete tool, the current object is read immediately before the call, and a post-write read proves deletion or terminal absence.
+- Current verified deletions include resource members, Flow variable groups, application orchestration, application variable groups, and test cases where their named tools are visible. Pipeline-definition deletion, package deletion, application deletion, tag deletion, and test-plan deletion need their own matching tool; do not substitute close, disable, destroy, or another object's deletion.
+- Allow true archival only when a matching archive tool or documented archived-state field is visible for that object. A delete, close, complete, disable, retention, or released state is not an archive. The current official catalog has no generic archive operation, so return `CAPABILITY_MISSING` for unsupported archival requests.
+
+## Scheduled and automated writes
+
+- Allow one scheduled write only when the active tool contract explicitly accepts target, action, cadence/timezone, enabled state, and stop condition, then read back the saved schedule. The current official catalog has no standalone generic scheduler; do not emulate one with a polling loop or local cron.
+- Allow unattended automation only under a separate bounded policy that specifies service identity, project binding, exact targets, allowed actions, trigger/cadence, concurrency/rate, duplicate handling, retry behavior, audit sink, stop condition, and human escalation. Run ordinary writes sequentially and preserve `REJECTED`, `FAILED`, and `SUBMITTED_UNVERIFIED` outcomes.
+
 ## Assignment and workflow rules
 
 - Match members by stable ID after search. Zero or multiple same-name matches stop the write.
@@ -119,4 +164,4 @@ Report the bound project display name, object identifier, requested field summar
 
 ## Automation boundary
 
-An interactive user's permission for direct single writes does not authorize unattended writes. Scheduled analysis is read-only in v1. A later automation must define its own project binding, service identity, allowed action set, rate/concurrency limits, cursor, duplicate policy, audit sink, retry rules, and human escalation path.
+An interactive user's permission for direct single writes does not authorize unattended writes. Scheduled analysis remains read-only unless a separate scheduled-write contract exists. Any later automation must satisfy the bounded policy above; a user request to automate one action is not permission to expand the target set, loop indefinitely, or silently retry uncertain writes.

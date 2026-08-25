@@ -5,7 +5,7 @@
 Prefer the Alibaba Cloud hosted Yunxiao MCP service:
 
 ```text
-URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management
+URL: https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management,packages-management,application-delivery,test-management
 Transport: Streamable HTTP (stateless)
 Authentication: Authorization: Bearer <ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN>
 ```
@@ -55,7 +55,7 @@ node scripts/doctor.mjs --project-root <project-root>
 node scripts/doctor.mjs --project-root <project-root> --json
 ```
 
-The script requires Node.js 18+, is read-only, and never modifies an agent config, shell profile, proxy, certificate store, repository, or GUI process. It directly verifies the official MCP service, required project and code-management tools, token presence, `yunxiao.toml` syntax, and—when a binding exists—the remote project identity and display snapshots. Its JSON `binding.status` is `LOCAL_VALID` until remote verification succeeds and `VERIFIED` afterward; only `VERIFIED` can produce `writeReady: true`. A direct service success does not prove that an already-running GUI client inherited the same environment; validate again from a new client process.
+The script requires Node.js 18+, is read-only, and never modifies an agent config, shell profile, proxy, certificate store, repository, or GUI process. It directly verifies the official MCP service, required core tools, token presence, `yunxiao.toml` syntax, and—when a binding exists—the remote project identity and display snapshots. Package, application-delivery, test, and high-risk write tools are checked per request against the active MCP tool list and input contract; they are not all made global readiness requirements. Its JSON `binding.status` is `LOCAL_VALID` until remote verification succeeds and `VERIFIED` afterward; only `VERIFIED` can produce `writeReady: true`. A direct service success does not prove that an already-running GUI client inherited the same environment; validate again from a new client process.
 
 ## Client-neutral configuration workflow
 

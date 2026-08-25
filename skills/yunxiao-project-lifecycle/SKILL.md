@@ -1,13 +1,13 @@
 ---
 name: yunxiao-project-lifecycle
-description: Manage Alibaba Cloud Yunxiao (云效) project, Codeup repository, and Flow pipeline lifecycles through the official MCP, including repositories, branches, commits, files, merge requests, reviews, project work items, sprints, versions, milestones, pipelines, pipeline runs, task history, and task logs. Use when a request concerns Yunxiao project binding or lifecycle work such as 需求、缺陷、工作项、代码库、分支、合并请求、流水线、运行记录、日志、迭代、版本、里程碑、分配、归档, query, create, update, review, merge, triage, or automation; also use to install, configure, or diagnose the Yunxiao MCP integration and yunxiao.toml.
+description: Manage Alibaba Cloud Yunxiao (云效) project, Codeup repository, Flow pipelines, package repositories, application delivery, and test lifecycles through the official MCP, including repositories, branches, commits, files, merge requests, reviews, work items, sprints, versions, pipelines, pipeline jobs, resources, tags, deployments, packages, applications, tests, deletion, archival, scheduling, and bounded automation. Use when a request concerns Yunxiao project binding or lifecycle work such as 需求、缺陷、工作项、代码库、分支、合并请求、流水线、任务、资源、标签、部署、包仓库、应用交付、测试、归档、定时写入、自动化写入, query, create, update, delete, review, merge, triage, or automation; also use to install, configure, or diagnose the Yunxiao MCP integration and yunxiao.toml.
 ---
 
 # Yunxiao Project Lifecycle
 
 ## Start every task
 
-1. Detect whether the active environment exposes the official Yunxiao MCP capabilities needed by the request. Code actions require the `code-management` capability; pipeline queries require the `pipeline-management` capability; repository-member writes require a separately verified repository-membership capability. Do not assume a client name, installation directory, server alias, or tool namespace.
+1. Detect whether the active environment exposes the official Yunxiao MCP capabilities needed by the request. Code actions require the `code-management` capability; pipeline actions require `pipeline-management`; package reads require `packages-management`; application delivery requires `application-delivery`; test actions require `test-management`; repository-member writes require a separately verified repository-membership capability. Deletion, archival, scheduled writes, and unattended automation additionally require a matching verified tool contract. Do not assume a client name, installation directory, server alias, or tool namespace.
 2. If capabilities or authentication are missing, stop all Yunxiao writes and follow [MCP setup](references/mcp-setup.md). Resolve paths from this `SKILL.md` directory and run `node <this-skill-directory>/scripts/doctor.mjs --project-root <project-root>` when Node.js 18+ is available.
 3. Resolve the project root and read `<project-root>/yunxiao.toml`. Follow [project binding](references/project-binding.md). Without a valid binding, allow organization/project/repository discovery only; never guess a write target.
 4. Read [lifecycle policy](references/lifecycle-policy.md) before any create or update operation.
@@ -39,7 +39,7 @@ For every allowed single-object write, including each item in an explicitly auth
 4. Read the same object again and compare the requested fields.
 5. Report one of: `VERIFIED_SUCCESS`, `SUBMITTED_UNVERIFIED`, `REJECTED`, or `FAILED`.
 
-Directly execute explicit single-object branch/file change, merge-request creation, review/comment, assignment, field update, and legal status-transition requests when all checks pass. Do not infer writes from requests to analyze, summarize, inspect, plan, or recommend.
+Directly execute explicit single-object branch/file change, merge-request creation, review/comment, assignment, field update, legal status-transition, pipeline-control, application-delivery, package, and test requests when all object-specific checks pass. Do not infer writes from requests to analyze, summarize, inspect, plan, or recommend.
 
 Pipeline list, detail, run-history, task-history, and log requests are read-only. Execute them only after the `pipeline-management` capability and each requested tool's input contract are verified; do not infer a trigger, retry, cancellation, deployment, or configuration change from a read request.
 
@@ -52,9 +52,9 @@ Pipeline list, detail, run-history, task-history, and log requests are read-only
 - Never hide partial success, permission failures, MCP errors, or post-write mismatches.
 - Do not use bulk-write APIs or infer a multi-object scope. An explicitly authorized ordered set of no more than 20 uniquely identified objects may be processed sequentially under the bounded multi-write protocol in the lifecycle policy.
 - Do not use organization-member tools as a substitute for repository-member permission tools.
-- Do not execute deletions, true archival, or scheduled writes in v1. Do not substitute deletion or a completed status for archival.
-- Do not trigger, retry, cancel, create, update, or delete pipeline runs or pipeline definitions in the minimal pipeline scope. Do not expose raw pipeline logs when they contain token, cookie, authorization, or other secret-like values; redact those values while preserving the relevant failure context.
-- Keep automation read-only unless a separate automation policy explicitly authorizes a bounded write scope.
+- Treat deletion, true archival, scheduled writes, and unattended automation as explicit high-risk actions. Allow them only when the user requests the exact object and action, the active MCP exposes a matching tool/input contract, and the object-specific policy below passes. Never substitute deletion or a completed status for archival.
+- Do not automatically retry or broaden a pipeline action. An explicit request may cancel one run or job, execute one job/task, delete one pipeline definition, change one resource/member/tag, or perform one deployment only after exact target resolution, contract validation, pre-read, one write, and post-read verification. A missing tool is `CAPABILITY_MISSING`; never use a second API client. Redact token, cookie, authorization, and other secret-like values from pipeline and deployment logs while preserving relevant failure context.
+- Keep unattended writes read-only unless a separate automation policy explicitly authorizes a bounded write scope with identity, targets, allowed actions, trigger/cadence, concurrency/rate, retry, audit, stop, and escalation rules. Scheduled writes additionally require a matching schedule contract; do not invent a scheduler or run an open-ended loop.
 - Redact tokens, authorization headers, cookies, personal data not needed for the result, and internal error payloads that may contain secrets.
 
 ## Code management
@@ -69,7 +69,25 @@ Pipeline list, detail, run-history, task-history, and log requests are read-only
 - For pipeline details, use `get_pipeline` after resolving the pipeline ID. Do not assume a pipeline is project-scoped when the tool contract requires an organization ID and pipeline ID.
 - For run status and history, use `get_latest_pipeline_run`, `list_pipeline_runs`, or `get_pipeline_run` according to the user's requested scope. Do not replace a requested run ID with the latest run.
 - For task history and logs, use `list_pipeline_jobs_by_category`, `list_pipeline_job_historys`, and `get_pipeline_job_run_log` only after resolving the exact pipeline, run, and job identifiers required by the active tool contract.
-- The minimal scope does not authorize `create_pipeline_run`, `execute_pipeline_job_run`, pipeline configuration changes, resource/tag changes, or deployment operations. Report those as unsupported by the current skill policy without using a second API client.
+- For an explicitly requested pipeline-definition creation, check for an exact-name duplicate, create exactly one pipeline without running it, then read the returned pipeline ID. If the creation tool cannot accept the complete requested YAML, one immediate `update_pipeline` call for that newly created ID is allowed to finish the same requested definition before post-read verification.
+- For an explicitly requested update, resolve exactly one pipeline ID, read its current definition, submit one `update_pipeline` call, then read it again and compare the requested name and YAML content.
+- For an explicitly requested single run, read the pipeline definition immediately before execution, confirm that the requested branch/tag and runtime variables are explicit and valid, reject deploy-capable definitions unless deployment is separately authorized, call `create_pipeline_run` exactly once, then monitor that returned run ID. A failed run does not authorize an automatic retry or configuration change; a separate ongoing debugging authorization may scope additional sequential runs to one pipeline, input set, and success condition.
+- For an explicitly requested cancellation or single-task action, resolve the exact pipeline/run/job/task and action first, then use only the verified matching control tool such as `stop_pipeline_job_run`, `execute_pipeline_job_run`, `retry_pipeline_job_run`, `rerun_pipeline_job_run`, `skip_pipeline_job_run`, or `execute_pipeline_job_action`. Do not infer cancellation, retry, skip, or execution from a read request.
+- For resources, members, variable groups, tags, or deployments, require the exact resource type and ID plus the verified action tool; read the object before and after the one write. Delete, archive, and deployment operations remain subject to the high-risk rules below.
+
+## Application delivery, packages, and tests
+
+- For application delivery, resolve one application and, when relevant, one orchestration, variable group, tag, change order, release stage, environment, or deployment target. Treat deploy, scale, rollback, destroy, release-stage execute/cancel/retry/skip, and application orchestration changes as separate explicit actions; read the current object, submit one matching tool call, and verify the result.
+- For package repositories and artifacts, use only the currently exposed package tools such as `list_package_repositories`, `list_artifacts`, and `get_artifact`. Do not invent upload, delete, archive, retention, or package-write tools; report `CAPABILITY_MISSING` until the active MCP exposes and verifies the requested contract.
+- For tests, resolve one test directory, case, plan, result, or tag. Use the verified testcase create/delete and result-update tools for explicit requests; do not treat updating a result as updating or deleting a case/plan. Unsupported test-plan deletion, archival, scheduling, or automated execution is `CAPABILITY_MISSING` until a matching MCP tool is visible.
+- Application, package, and test writes follow the same exact-ID, read-before/write-once/read-after protocol. A request covering several objects must explicitly identify every object and remain within the bounded multi-write limit.
+
+## Deletion, archival, schedules, and automation
+
+- Allow one deletion only when the exact target is uniquely resolved, a matching delete tool is visible, the user explicitly requested deletion, and the post-write read proves the target is deleted or terminally absent. Do not infer cleanup from a delete request for another object.
+- Allow true archival only when the active MCP exposes a matching archive operation or a documented archived-state field for that object. A delete, close, complete, disable, or retention change is not archival. The current official catalog has no generic archive operation, so unsupported archive requests must return `CAPABILITY_MISSING`.
+- Allow one scheduled write only when the active tool contract accepts the requested target, action, schedule/cadence, timezone, enabled state, and stop condition. Verify the saved schedule after writing. The current official catalog has no standalone generic scheduler; do not simulate one with a loop or local cron.
+- Allow unattended automation only under a separate bounded policy that names the service identity, project binding, exact targets, permitted actions, trigger, cadence, concurrency/rate limit, duplicate rule, retry rule, audit sink, stop condition, and human escalation. Run one ordinary write at a time and preserve `REJECTED`, `FAILED`, and `SUBMITTED_UNVERIFIED` semantics.
 
 ## Install a downloaded copy
 

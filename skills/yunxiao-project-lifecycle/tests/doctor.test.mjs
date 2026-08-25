@@ -329,6 +329,9 @@ test("reaches READY for JSON and SSE MCP responses", async () => {
     assert.equal(result.endpoint.url, DEFAULT_MCP_URL);
     assert.match(DEFAULT_MCP_URL, /code-management/);
     assert.match(DEFAULT_MCP_URL, /pipeline-management/);
+    assert.match(DEFAULT_MCP_URL, /packages-management/);
+    assert.match(DEFAULT_MCP_URL, /application-delivery/);
+    assert.match(DEFAULT_MCP_URL, /test-management/);
     assert.equal(result.endpoint.regionConfigured, true);
     assert.equal(JSON.stringify(result).includes("secret-value"), false);
     assert.equal(JSON.stringify(result).includes("example.devops.aliyuncs.com"), false);

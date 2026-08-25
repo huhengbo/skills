@@ -1,6 +1,6 @@
 import { parseBinding } from "./binding.mjs";
 
-export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management";
+export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management,packages-management,application-delivery,test-management";
 export const PRIMARY_TOKEN_ENV = "ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN";
 export const LEGACY_TOKEN_ENV = "YUNXIAO_ACCESS_TOKEN";
 
