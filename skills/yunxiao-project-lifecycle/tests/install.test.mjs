@@ -47,7 +47,7 @@ test("apply installs the complete portable skill", async () => {
   assert.equal(output.status, "INSTALLED");
   assert.match(output.digest, /^[a-f0-9]{64}$/);
   const skill = await readFile(path.join(output.destination, "SKILL.md"), "utf8");
-  assert.match(skill, /^---\nname: yunxiao-project-lifecycle/m);
+  assert.match(skill, /^---\r?\nname: yunxiao-project-lifecycle/m);
   await access(path.join(output.destination, "scripts", "doctor.mjs"));
 });
 
