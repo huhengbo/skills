@@ -1,3 +1,25 @@
 .DS_Store
 __pycache__/
 *.pyc
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs and transient files
+*.log
+*.tmp
+*.swp
+*.bak
+*.backup-*
+
+# Common tool caches
+.pytest_cache/
+.coverage
+node_modules/
