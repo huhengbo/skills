@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdtemp, readdir, readFile, symlink } from "node:fs/promises";
+import { access, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,15 +24,18 @@ test("requires an explicit installation target", () => {
   assert.equal(JSON.parse(result.stdout).status, "SKILL_INSTALL_TARGET_REQUIRED");
 });
 
-test("dry-run reports the destination without creating it", async () => {
+test("dry-run reports destination and backup root without creating them", async () => {
   const target = await mkdtemp(path.join(tmpdir(), "yunxiao-install-dry-"));
-  const result = runInstaller(["--json", "--target", target]);
+  const backupRoot = `${target}-backups`;
+  const result = runInstaller(["--json", "--target", target, "--backup-root", backupRoot]);
   const output = JSON.parse(result.stdout);
 
   assert.equal(result.status, 0);
   assert.equal(output.status, "DRY_RUN");
   assert.equal(output.destination, path.join(target, "yunxiao-project-lifecycle"));
+  assert.equal(output.backupRoot, path.resolve(backupRoot));
   await assert.rejects(access(output.destination));
+  await assert.rejects(access(output.backupRoot));
 });
 
 test("apply installs the complete portable skill", async () => {
@@ -42,23 +45,51 @@ test("apply installs the complete portable skill", async () => {
 
   assert.equal(result.status, 0);
   assert.equal(output.status, "INSTALLED");
+  assert.match(output.digest, /^[a-f0-9]{64}$/);
   const skill = await readFile(path.join(output.destination, "SKILL.md"), "utf8");
   assert.match(skill, /^---\nname: yunxiao-project-lifecycle/m);
   await access(path.join(output.destination, "scripts", "doctor.mjs"));
 });
 
-test("a second apply preserves a backup", async () => {
-  const target = await mkdtemp(path.join(tmpdir(), "yunxiao-install-backup-"));
-  const first = runInstaller(["--json", "--target", target, "--apply"]);
+test("identical reinstall is idempotent and creates no backup", async () => {
+  const target = await mkdtemp(path.join(tmpdir(), "yunxiao-install-idempotent-"));
+  const backupRoot = `${target}-backups`;
+  const first = runInstaller(["--json", "--target", target, "--backup-root", backupRoot, "--apply"]);
   assert.equal(first.status, 0);
-  const second = runInstaller(["--json", "--target", target, "--apply"]);
-  const output = JSON.parse(second.stdout);
 
+  const second = runInstaller(["--json", "--target", target, "--backup-root", backupRoot, "--apply"]);
+  const output = JSON.parse(second.stdout);
+  assert.equal(second.status, 0);
+  assert.equal(output.status, "UNCHANGED");
+  assert.equal(output.backup, null);
+  await assert.rejects(access(backupRoot));
+});
+
+test("changed installation is backed up outside active discovery directory", async () => {
+  const target = await mkdtemp(path.join(tmpdir(), "yunxiao-install-backup-"));
+  const backupRoot = `${target}-backups`;
+  const first = runInstaller(["--json", "--target", target, "--backup-root", backupRoot, "--apply"]);
+  const firstOutput = JSON.parse(first.stdout);
+  assert.equal(first.status, 0);
+
+  await writeFile(path.join(firstOutput.destination, "local-drift.txt"), "drift\n", "utf8");
+  const second = runInstaller(["--json", "--target", target, "--backup-root", backupRoot, "--apply"]);
+  const output = JSON.parse(second.stdout);
   assert.equal(second.status, 0);
   assert.equal(output.status, "INSTALLED");
   assert.ok(output.backup);
-  const entries = await readdir(target);
-  assert.ok(entries.some((entry) => entry.startsWith("yunxiao-project-lifecycle.backup-")));
+  assert.equal(path.relative(target, output.backup).startsWith(".."), true);
+  assert.equal(path.relative(backupRoot, output.backup).startsWith(".."), false);
+  await access(path.join(output.backup, "local-drift.txt"));
+  await assert.rejects(access(path.join(output.destination, "local-drift.txt")));
+});
+
+test("rejects backup roots inside the active discovery directory", async () => {
+  const target = await mkdtemp(path.join(tmpdir(), "yunxiao-install-bad-backup-"));
+  const backupRoot = path.join(target, ".backups");
+  const result = runInstaller(["--json", "--target", target, "--backup-root", backupRoot, "--apply"]);
+  assert.equal(result.status, 1);
+  assert.equal(JSON.parse(result.stdout).status, "INSTALL_TARGET_INVALID");
 });
 
 test("rejects unsafe source-related and filesystem-root targets", () => {
