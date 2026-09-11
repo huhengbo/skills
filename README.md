@@ -1,69 +1,80 @@
 # skills
 
-Reusable Agent Skills repository for standardized operations, API references, and automation workflows. Core skills follow the portable [Agent Skills specification](https://agentskills.io/specification); client-specific metadata is optional and never defines core behavior.
+Reusable Agent Skills for standardized operations, API references, and automation workflows. Core behavior follows the portable Agent Skills model; client-specific metadata is an adapter layer and must not redefine the skill.
 
-## Goals
-- Maintain reusable, production-safe skills.
-- Keep skill structure and quality consistent.
-- Support long-term iterative updates.
+## Repository model
 
-## Repository Layout
 ```text
 skills/
   <skill-name>/
-    SKILL.md
-    references/
-    scripts/      (optional)
-    assets/       (optional)
-    agents/       (optional client adapter)
-    .claude-plugin/ (optional client adapter)
+    SKILL.md             task entry point
+    references/          detailed normative/reference material
+    scripts/             optional deterministic helpers
+    tests/               optional skill-local regression tests
+    assets/              optional static assets
+    agents/              optional client adapter
+    .claude-plugin/      optional Claude adapter
 ```
 
-## Skills
-- `cliproxyapi-management-api`
-  - Full CLIProxyAPI interface reference (core API, management API, Amp routes)
-  - Provider CRUD schemas and safe request templates
+`skills-manifest.json` is the canonical inventory for maintained skill names, versions, and distribution modes. `.claude-plugin/marketplace.json` and per-skill plugin metadata must agree with it.
 
-- `aliyun-infra`
-  - Standardized Aliyun CLI operations across profiles and regions
-  - SMS/Dysmsapi workflows for signatures, templates, sending, delivery details, and statistics
-  - Independent CAS certificate application/renewal, DNS validation, and OSS deployment workflows
-  - Public TLS propagation verification for edge certificate rollouts
-  - Safety-first workflow for mutating operations
-  - Generic troubleshooting and command catalog
+## Maintained skills
 
-- `tencentcloud-infra`
-  - Standardized TencentCloud `tccli` operations across profiles and regions
-  - Safety-first workflow for mutating operations
-  - Generic troubleshooting and command catalog
+- `aliyun-infra` — Aliyun CLI operations, SMS, CAS certificates, DNS/OSS deployment, and safe infrastructure workflows.
+- `cliproxyapi-management-api` — CLIProxyAPI endpoint reference and guarded provider-management workflows.
+- `tencentcloud-infra` — TencentCloud `tccli` operations with profile/region and mutation safety controls.
+- `werss-official-account` — WeRSS-powered WeChat Official Account search, subscription, article research, and feed URLs.
+- `yunxiao-project-lifecycle` — Yunxiao project/Codeup/pipeline/package/application/test lifecycle management and project binding.
 
-- `werss-official-account`
-  - Search, subscribe, refresh, and summarize WeChat Official Account content through WeRSS
-  - Generate RSS / Atom / JSON feed URLs for accounts, tags, and keyword feeds
-  - Access Key based API wrapper for repeatable agent workflows
+## Progressive disclosure
 
-- `yunxiao-project-lifecycle`
-  - Manage Codeup repositories, branches, commits, files, merge requests, reviews, and project requirements, defects, tasks, sprints, versions, and milestones through the official Yunxiao MCP
-  - Bind a repository to one Yunxiao project through a portable root-level `yunxiao.toml`
-  - Diagnose MCP, authentication, project/code capabilities, and bindings on Windows, macOS, and Linux without storing credentials
+Keep `SKILL.md` small enough to load for routine tasks. It should define:
 
-## New Skill Workflow
-1. Initialize skill skeleton with `skill-creator`.
-2. Keep `SKILL.md` concise: trigger context + execution workflow.
-3. Put detailed technical material into `references/`.
-4. Add scripts only for repetitive or deterministic tasks.
-5. Validate each portable skill with the Agent Skills reference command `uvx --from skills-ref agentskills validate <skill-dir>`; use client-specific validators only as additional checks.
+- when the skill applies;
+- how to resolve context and targets;
+- the high-level execution workflow;
+- hard safety gates and result semantics;
+- which reference to load for detailed rules.
 
-## Naming Rules
-- Use lowercase letters, digits, and hyphens (kebab-case).
-- Example: `aliyun-infra`.
+Put service catalogs, schemas, long command tables, operation matrices, troubleshooting, and detailed object-specific policy in `references/`. Each normative rule should have one clear source of truth instead of being copied between `SKILL.md` and reference files.
 
-## Security Rules
-- Never commit secrets, tokens, cookies, authorization headers, or private endpoints.
-- Use placeholders for account, organization, project, and user IDs in reusable Skill examples. Consumer repositories may version stable binding IDs only when their own data-classification policy permits it.
-- Mark destructive operations and require explicit confirmation in skill workflows.
+See [authoring guidance](docs/authoring.md).
 
-## Maintenance Rules
-- Keep each commit focused on one skill or one update theme.
-- Update related `references/` whenever behavior or API surface changes.
-- Remove stale or duplicated skill content regularly.
+## Cross-platform policy
+
+Maintained skills and canonical helper scripts must support **Windows, macOS, and Linux**. WSL or Git Bash is not considered native Windows support.
+
+Prefer Python or Node.js for executable cross-platform helpers. A `.sh` script may remain as a convenience wrapper only when an equivalent canonical platform-neutral path exists. Shell-specific setup examples must have equivalent guidance for other supported platforms when the commands materially differ.
+
+## Validation
+
+Run the same repository-wide checks used by CI:
+
+```text
+python scripts/validate_repo.py --with-tests
+```
+
+The command validates skill structure, local references, distribution metadata, secret hygiene, `.gitignore` policy, and all discovered Python/Node tests. GitHub Actions executes the same command on Windows, macOS, and Linux. See [validation details](docs/validation.md).
+
+For an individual portable skill, the Agent Skills reference validator may also be used when available:
+
+```text
+uvx --from skills-ref agentskills validate <skill-dir>
+```
+
+## Security and mutation rules
+
+- Never commit secrets, tokens, cookies, authorization headers, private keys, or secret-bearing backups.
+- Use placeholders in reusable examples; keep environment/project bindings separate from reusable skill content.
+- Read current state before a mutation and verify state afterward when the external system allows it.
+- Destructive or high-impact actions must require explicit target/action intent.
+- Never retry an uncertain write until a read establishes whether the side effect occurred.
+- Prefer narrow updates over whole-object/list replacement, and detect concurrent state changes where possible.
+
+## Maintenance
+
+- Keep commits focused on one skill or one update theme.
+- Update the canonical reference when an API or safety rule changes instead of duplicating the same rule in multiple files.
+- Add regression tests for reproduced failures before or alongside fixes.
+- Keep `skills-manifest.json`, marketplace metadata, and per-skill version metadata synchronized.
+- Remove stale examples and historical assumptions from normative skill files; keep design/history documents clearly non-normative.
