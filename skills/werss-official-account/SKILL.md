@@ -7,27 +7,19 @@ description: Search, subscribe, retrieve, refresh, get RSS URLs for, and summari
 
 ## Overview
 
-Use this skill to work with WeChat Official Account content stored in a WeRSS / we-mp-rss instance. Prefer the bundled CLI over ad hoc `curl` so authentication, query parameters, output shape, and safety rules stay consistent.
+Use this skill to work with WeChat Official Account content stored in a WeRSS / we-mp-rss instance. Prefer the bundled Python CLI over ad hoc HTTP commands so authentication, query parameters, output shape, and safety rules stay consistent across Windows, macOS, and Linux.
 
 ## Setup
 
 Start every first-time setup with:
 
-```bash
+```text
 python scripts/werss.py doctor
 ```
 
-The doctor command reports missing configuration, checks the WeRSS OpenAPI document when `WERSS_BASE_URL` is present, and verifies Access Key auth when credentials are present.
+The doctor command reports missing configuration, checks the WeRSS OpenAPI document when `WERSS_BASE_URL` is present, and verifies Access Key auth when credentials are present. It is automation-safe: `READY` exits with code `0`; configuration, OpenAPI/connectivity, and authentication failures use distinct non-zero exit codes.
 
-Require these environment variables before calling protected WeRSS APIs:
-
-```bash
-export WERSS_BASE_URL="https://<your-werss-host>"
-export WERSS_ACCESS_KEY="<access-key>"
-export WERSS_SECRET_KEY="<secret-key>"
-```
-
-Use `python scripts/werss.py health` to verify only the base URL. Read `references/auth.md` when configuring Access Key auth.
+Require `WERSS_BASE_URL`, `WERSS_ACCESS_KEY`, and `WERSS_SECRET_KEY` before calling protected WeRSS APIs. Read `references/auth.md` for native Windows PowerShell and macOS/Linux setup, HTTPS requirements, and credential handling. Use `python scripts/werss.py health` to verify only the public OpenAPI endpoint.
 
 ## Default Workflow
 
@@ -37,14 +29,17 @@ For prompts such as "查下理想汽车最近一周的公众号信息，总结�
 2. Search or list matching official accounts.
 3. If no subscribed account is found, search public account candidates and ask before subscribing.
 4. Refresh the selected account only when fresh content matters.
-5. Search or list recent articles, then fetch full content for the most relevant items.
-6. Summarize with article titles, account names, publish times, and source links.
+5. Search or list recent articles with `--since`; allow the CLI to scan bounded pages and inspect the returned coverage metadata.
+6. If `truncated` is `true`, do not claim the requested time window is complete. Increase `--max-pages` deliberately or report the incomplete coverage.
+7. Fetch full content for the most relevant items and summarize with article titles, account names, publish times, and source links.
+
+Time-window filtering is based on publish/create time fields only. Refresh/update timestamps are never treated as publication time, so a newly refreshed old article is not silently classified as newly published.
 
 ## Account Commands
 
 Use these for account discovery and subscription workflows:
 
-```bash
+```text
 python scripts/werss.py search-accounts "理想汽车" --limit 10
 python scripts/werss.py list-accounts --query "理想汽车" --status active
 python scripts/werss.py get-account MP_ID
@@ -61,11 +56,14 @@ When `subscribe-account --from-search` returns multiple candidates, present them
 
 Use these for research and summarization:
 
-```bash
+```text
 python scripts/werss.py search-articles "端到端智驾" --since 7d --limit 20
 python scripts/werss.py account-articles MP_ID --since 7d --limit 30
+python scripts/werss.py search-articles "端到端智驾" --since 30d --limit 50 --max-pages 20
 python scripts/werss.py get-article ARTICLE_ID --content
 ```
+
+When `--since` is supplied, the CLI scans pages up to `--max-pages` (default `20`) and reports `pages_fetched`, `complete`, `truncated`, counts, and the effective publication-time basis. A short final page proves the bounded query reached the end; exhausting `--max-pages` reports truncation instead of silently claiming completeness.
 
 For broad public-web or news tasks, use this skill only when the user asks for WeChat Official Account / 公众号 sources. Combine with web search when the user explicitly asks for broader sources.
 
@@ -73,7 +71,7 @@ For broad public-web or news tasks, use this skill only when the user asks for W
 
 Use these when the user asks for RSS, Atom, JSON feed URLs, or subscriptions:
 
-```bash
+```text
 python scripts/werss.py list-rss --limit 50
 python scripts/werss.py get-rss-url FEED_ID --format rss
 python scripts/werss.py get-rss-url FEED_ID --format atom --check
@@ -87,7 +85,7 @@ Default feed format is `rss`; supported formats are `rss`, `atom`, and `json`.
 
 Use tags for grouped subscriptions:
 
-```bash
+```text
 python scripts/werss.py list-tags
 python scripts/werss.py create-tag "新能源车企" --accounts MP_ID1,MP_ID2
 ```
@@ -100,7 +98,7 @@ Read `references/safety.md` before adding any new command or using a destructive
 
 ## Resources
 
-- `scripts/werss.py`: CLI wrapper for WeRSS Access Key APIs.
+- `scripts/werss.py`: cross-platform Python CLI wrapper for WeRSS Access Key APIs.
 - `references/api-map.md`: Supported command-to-endpoint mapping.
-- `references/auth.md`: Access Key setup and environment variables.
+- `references/auth.md`: Access Key setup, transport safeguards, and Windows/macOS/Linux environment guidance.
 - `references/safety.md`: Allowed and disallowed route policy.

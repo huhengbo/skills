@@ -112,7 +112,15 @@ aliyun cas ListWorkerResource --JobId <jobId> --CloudProduct OSS --CurrentPage 1
 
 ## C. Verify a Public TLS Endpoint
 
-Use this check after any certificate deployment, regardless of the target product. Multiple serial numbers mean edge propagation is still mixed. Keep waiting and recheck; do not create duplicate jobs.
+Use the portable Python checker after any certificate deployment, regardless of the target product. It runs natively on Windows, macOS, and Linux with Python 3 and does not require OpenSSL, Bash, WSL, or Git Bash.
+
+Canonical command on all three platforms:
+
+```text
+python <skill-dir>/scripts/check_tls_certificate.py --host <customDomain> --expected-serial <newCertificateSerial> --samples 8 --interval 5 --require-valid --require-verified
+```
+
+On macOS/Linux, the historical shell entry point remains as a compatibility wrapper and delegates to the same Python implementation:
 
 ```bash
 bash <skill-dir>/scripts/check_tls_certificate.sh \
@@ -120,13 +128,21 @@ bash <skill-dir>/scripts/check_tls_certificate.sh \
   --expected-serial <newCertificateSerial> \
   --samples 8 \
   --interval 5 \
-  --require-valid
+  --require-valid \
+  --require-verified
 ```
 
-When all samples show one expected serial, verify the strict HTTPS response:
+Verification semantics:
 
-```bash
-curl --noproxy '*' -4 -sSIL --fail https://<customDomain>/<path>
-```
+- `--samples` is the planned number of independent TLS connections.
+- `--interval` is actually enforced between samples.
+- By default every requested sample must succeed. Use `--min-success <n>` only when a reduced threshold is intentionally acceptable.
+- `--timeout` bounds each connection; `--overall-timeout` can additionally bound the whole check.
+- `--require-valid` checks certificate expiration separately from trust/hostname verification.
+- `--require-verified` requires the platform CA trust chain and hostname validation to succeed for every successful sample.
+- A failed or timed-out sample cannot be silently ignored and cannot produce `RESULT=CONVERGED` unless the explicit `--min-success` threshold is still met.
+- Multiple serials/certificate identities produce `RESULT=MIXED_EDGE_CERTIFICATES`; keep waiting and recheck rather than creating duplicate deployment jobs.
+
+When all required samples show one expected serial/identity and the requested validity/verification checks pass, verify the strict HTTPS response with a platform-appropriate HTTP client. Do not make `curl` a hard dependency of the skill workflow; PowerShell `Invoke-WebRequest` or another native client is acceptable on Windows.
 
 If TLS is consistent but the page is blank, inspect application routing and browser JavaScript errors. For a hash-based SPA URL, confirm that the exact fragment route is registered in the deployed bundle; the server never receives the fragment, so a valid certificate cannot repair an unregistered client route.
