@@ -21,15 +21,20 @@ DEFAULT_START_PAGE = 0
 DEFAULT_END_PAGE = 1
 DEFAULT_RSS_FORMAT = "rss"
 DEFAULT_TAG_LIMIT = 100
+DEFAULT_MAX_ARTICLE_PAGES = 20
 HOURS_PER_DAY = 24
 TIMESTAMP_MS_THRESHOLD = 10_000_000_000
+DOCTOR_CONFIG_ERROR = 2
+DOCTOR_OPENAPI_ERROR = 3
+DOCTOR_AUTH_ERROR = 4
 ALLOWED_RSS_FORMATS = {"rss", "atom", "json"}
 STATUS_VALUES = {"active": 1, "inactive": 0}
-TIME_FIELDS = (
+PUBLISH_TIME_FIELDS = (
     "publish_time",
     "publishTime",
     "create_time",
-    "created_at",
+)
+UPDATE_TIME_FIELDS = (
     "updated_at",
     "updatedAt",
 )
@@ -169,13 +174,7 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         has_credentials = req.get_header("Authorization") is not None
         target = urllib.parse.urljoin(req.full_url, newurl)
         if not redirect_is_safe(req.full_url, target, has_credentials):
-            raise urllib.error.HTTPError(
-                req.full_url,
-                code,
-                "unsafe redirect blocked",
-                headers,
-                fp,
-            )
+            raise urllib.error.HTTPError(req.full_url, code, "unsafe redirect blocked", headers, fp)
         return super().redirect_request(req, fp, code, msg, headers, target)
 
 
@@ -271,7 +270,10 @@ def parse_since(value: str) -> datetime:
 def parse_datetime_value(value: Any) -> datetime | None:
     if isinstance(value, (int, float)):
         seconds = value / 1000 if value > TIMESTAMP_MS_THRESHOLD else value
-        return datetime.fromtimestamp(seconds, tz=timezone.utc)
+        try:
+            return datetime.fromtimestamp(seconds, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
     if not isinstance(value, str) or not value:
         return None
     normalized = value.replace("Z", "+00:00")
@@ -284,23 +286,85 @@ def parse_datetime_value(value: Any) -> datetime | None:
     return None
 
 
-def filter_since(data: Any, since: str | None) -> Any:
-    if not since:
-        return data
+def first_parseable_datetime(item: dict[str, Any], fields: tuple[str, ...]) -> tuple[datetime | None, str | None]:
+    for field in fields:
+        value = item.get(field)
+        if value is None or value == "":
+            continue
+        parsed = parse_datetime_value(value)
+        if parsed is not None:
+            return parsed, field
+    return None, None
+
+
+def filter_articles_since(items: list[dict[str, Any]], since: str) -> dict[str, Any]:
     threshold = parse_since(since)
-    items = extract_items(data)
     kept: list[dict[str, Any]] = []
     skipped = 0
+    field_usage: dict[str, int] = {}
     for item in items:
-        parsed = next((parse_datetime_value(item.get(field)) for field in TIME_FIELDS if item.get(field)), None)
-        if parsed is None:
+        published_at, field = first_parseable_datetime(item, PUBLISH_TIME_FIELDS)
+        if published_at is None:
             skipped += 1
             continue
-        if parsed >= threshold:
+        assert field is not None
+        field_usage[field] = field_usage.get(field, 0) + 1
+        if published_at >= threshold:
             kept.append(item)
-    if not kept and skipped == len(items) and items:
-        raise WeRSSError("No items had a parseable publish/create time for --since filtering.")
-    return {"items": kept, "source_count": len(items), "skipped_without_parseable_time": skipped, "since": since}
+    return {
+        "items": kept,
+        "source_count": len(items),
+        "returned_count": len(kept),
+        "skipped_without_parseable_publish_time": skipped,
+        "publish_time_fields_used": field_usage,
+        "since": since,
+    }
+
+
+def fetch_articles_for_window(
+    config: Config,
+    query: dict[str, Any],
+    since: str,
+    max_pages: int,
+    requester=None,
+) -> dict[str, Any]:
+    if max_pages <= 0:
+        raise WeRSSError("--max-pages must be greater than zero.")
+    page_size = int(query.get("limit") or DEFAULT_LIMIT)
+    if page_size <= 0:
+        raise WeRSSError("--limit must be greater than zero.")
+    requester = requester or request_json
+    initial_offset = int(query.get("offset") or 0)
+    items: list[dict[str, Any]] = []
+    pages_fetched = 0
+    complete = False
+
+    for page_index in range(max_pages):
+        page_query = dict(query)
+        page_query["offset"] = initial_offset + page_index * page_size
+        page_query["limit"] = page_size
+        data = requester(config, RequestSpec("GET", "/api/v1/wx/articles", page_query))
+        page_items = extract_items(data)
+        pages_fetched += 1
+        items.extend(page_items)
+        if len(page_items) < page_size:
+            complete = True
+            break
+
+    filtered = filter_articles_since(items, since)
+    filtered.update(
+        {
+            "pages_fetched": pages_fetched,
+            "page_size": page_size,
+            "offset_start": initial_offset,
+            "max_pages": max_pages,
+            "complete": complete,
+            "truncated": not complete,
+            "time_basis": "publish_time_only",
+            "excluded_update_fields": list(UPDATE_TIME_FIELDS),
+        }
+    )
+    return filtered
 
 
 def account_body_from_args(args: argparse.Namespace) -> dict[str, Any]:
@@ -336,39 +400,59 @@ def cmd_health(args: argparse.Namespace) -> None:
     print_json({"base_url": config.base_url, "title": data.get("info", {}).get("title"), "paths": len(data.get("paths", {}))})
 
 
-def cmd_doctor(args: argparse.Namespace) -> None:
+def cmd_doctor(args: argparse.Namespace) -> int:
     raw_base_url = os.environ.get("WERSS_BASE_URL", "")
     access_key = os.environ.get("WERSS_ACCESS_KEY", "").strip() or None
     secret_key = os.environ.get("WERSS_SECRET_KEY", "").strip() or None
-    result = {"configured": {"base_url": bool(raw_base_url), "access_key": bool(access_key), "secret_key": bool(secret_key)}, "checks": [], "next_steps": []}
+    result = {
+        "status": "CHECKING",
+        "configured": {"base_url": bool(raw_base_url), "access_key": bool(access_key), "secret_key": bool(secret_key)},
+        "checks": [],
+        "next_steps": [],
+    }
     if not raw_base_url:
+        result["status"] = "CONFIG_ERROR"
         result["next_steps"].append("Set WERSS_BASE_URL to your WeRSS origin, for example https://werss.example.com.")
-        result["next_steps"].append("Create a dedicated Access Key in the WeRSS UI, then export WERSS_ACCESS_KEY and WERSS_SECRET_KEY.")
+        result["next_steps"].append("Create a dedicated Access Key in the WeRSS UI, then set WERSS_ACCESS_KEY and WERSS_SECRET_KEY.")
         print_json(result)
-        return
+        return DOCTOR_CONFIG_ERROR
     try:
         base_url = validate_base_url(raw_base_url)
     except WeRSSError as exc:
+        result["status"] = "CONFIG_ERROR"
         result["checks"].append({"name": "base_url", "ok": False, "error": str(exc)})
         print_json(result)
-        return
+        return DOCTOR_CONFIG_ERROR
+
     config = Config(base_url, access_key, secret_key, DEFAULT_TIMEOUT_SECONDS)
     try:
         data = request_json(config, RequestSpec("GET", "/api/openapi.json", auth=False))
         result["checks"].append({"name": "openapi", "ok": True, "title": data.get("info", {}).get("title"), "paths": len(data.get("paths", {}))})
     except WeRSSError as exc:
+        result["status"] = "OPENAPI_ERROR"
         result["checks"].append({"name": "openapi", "ok": False, "error": str(exc)})
-    if not access_key or not secret_key:
-        result["next_steps"].append("Open WeRSS Access Key management, create a key, and export WERSS_ACCESS_KEY and WERSS_SECRET_KEY.")
         print_json(result)
-        return
+        return DOCTOR_OPENAPI_ERROR
+
+    if not access_key or not secret_key:
+        result["status"] = "CONFIG_ERROR"
+        result["next_steps"].append("Open WeRSS Access Key management, create a key, and set WERSS_ACCESS_KEY and WERSS_SECRET_KEY.")
+        print_json(result)
+        return DOCTOR_CONFIG_ERROR
+
     try:
         request_json(config, RequestSpec("GET", "/api/v1/wx/mps", {"limit": 1, "offset": 0}))
         result["checks"].append({"name": "access_key_auth", "ok": True})
     except WeRSSError as exc:
+        result["status"] = "AUTH_ERROR"
         result["checks"].append({"name": "access_key_auth", "ok": False, "error": str(exc)})
         result["next_steps"].append("Fix Access Key credentials or permissions, then rerun doctor.")
+        print_json(result)
+        return DOCTOR_AUTH_ERROR
+
+    result["status"] = "READY"
     print_json(result)
+    return 0
 
 
 def cmd_search_accounts(args: argparse.Namespace) -> None:
@@ -437,16 +521,21 @@ def article_query(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def article_output(config: Config, args: argparse.Namespace) -> Any:
+    query = article_query(args)
+    if not args.since:
+        return request_json(config, RequestSpec("GET", "/api/v1/wx/articles", query))
+    return fetch_articles_for_window(config, query, args.since, args.max_pages)
+
+
 def cmd_search_articles(args: argparse.Namespace) -> None:
     config = load_config(require_auth=True)
-    data = request_json(config, RequestSpec("GET", "/api/v1/wx/articles", article_query(args)))
-    print_json(filter_since(data, args.since))
+    print_json(article_output(config, args))
 
 
 def cmd_account_articles(args: argparse.Namespace) -> None:
     config = load_config(require_auth=True)
-    data = request_json(config, RequestSpec("GET", "/api/v1/wx/articles", article_query(args)))
-    print_json(filter_since(data, args.since))
+    print_json(article_output(config, args))
 
 
 def cmd_get_article(args: argparse.Namespace) -> None:
@@ -561,6 +650,7 @@ def add_article_parsers(sub: argparse._SubParsersAction[argparse.ArgumentParser]
     parser.add_argument("--mp-id", default="")
     parser.add_argument("--only-favorite", action="store_true", default=None)
     parser.add_argument("--has-content", action="store_true", default=None)
+    parser.add_argument("--max-pages", type=int, default=DEFAULT_MAX_ARTICLE_PAGES, help="Maximum pages to scan when --since is used.")
     add_pagination(parser)
     parser.set_defaults(func=cmd_search_articles)
     parser = sub.add_parser("account-articles")
@@ -568,6 +658,7 @@ def add_article_parsers(sub: argparse._SubParsersAction[argparse.ArgumentParser]
     parser.add_argument("--since")
     parser.add_argument("--only-favorite", action="store_true", default=None)
     parser.add_argument("--has-content", action="store_true", default=None)
+    parser.add_argument("--max-pages", type=int, default=DEFAULT_MAX_ARTICLE_PAGES, help="Maximum pages to scan when --since is used.")
     add_pagination(parser)
     parser.set_defaults(func=cmd_account_articles)
     parser = sub.add_parser("get-article")
@@ -629,11 +720,11 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        args.func(args)
+        result = args.func(args)
     except WeRSSError as exc:
         print(f"werss.py: error: {exc}", file=sys.stderr)
         return 1
-    return 0
+    return result if isinstance(result, int) else 0
 
 
 if __name__ == "__main__":
