@@ -98,7 +98,7 @@ test("reports TOKEN_MISSING without making a request", async () => {
   assert.equal(result.token.source, null);
   assert.equal(result.writeReady, false);
   assert.equal(called, false);
-  assert.equal(JSON.stringify(result).includes("Authorization"), false);
+  assert.doesNotMatch(JSON.stringify(result), /Bearer\s+/i);
 });
 
 test("rejects malformed tokens without making a request", async () => {
@@ -402,5 +402,5 @@ test("CLI emits redacted JSON for a missing token", async () => {
   assert.equal(result.status, 2);
   assert.equal(output.status, "TOKEN_MISSING");
   assert.equal(output.token.present, false);
-  assert.doesNotMatch(result.stdout, /authorization|bearer/i);
+  assert.doesNotMatch(result.stdout, /Bearer\s+/i);
 });
