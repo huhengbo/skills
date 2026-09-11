@@ -83,6 +83,10 @@ function printHuman(result) {
   console.log(`Platform: ${result.platform}`);
   console.log(`Architecture: ${result.architecture}`);
   console.log(`Capability profile: ${result.capabilities.profile}`);
+  console.log(`MCP protocol: ${result.protocol.era ?? "unresolved"}${result.protocol.version ? ` (${result.protocol.version})` : ""}`);
+  if (result.protocol.toolPages > 0) {
+    console.log(`Tool catalog pages: ${result.protocol.toolPages}`);
+  }
   console.log(`Token configured: ${result.token.present ? "yes" : "no"}`);
   if (result.token.source) {
     console.log(`Token environment: ${result.token.source}`);
@@ -129,6 +133,7 @@ async function main() {
       platform: options.platform,
       bindingText: await readBindingIfPresent(options.projectRoot),
       capability: options.capability,
+      protocolMode: "auto",
     });
     if (options.json) {
       console.log(JSON.stringify(result, null, 2));
