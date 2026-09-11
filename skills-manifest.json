@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "name": "aliyun-infra",
+      "version": "1.0.0",
+      "claude_marketplace": true,
+      "portable": true
+    },
+    {
+      "name": "cliproxyapi-management-api",
+      "version": "1.0.0",
+      "claude_marketplace": true,
+      "portable": true
+    },
+    {
+      "name": "tencentcloud-infra",
+      "version": "1.0.0",
+      "claude_marketplace": true,
+      "portable": true
+    },
+    {
+      "name": "werss-official-account",
+      "version": "1.0.0",
+      "claude_marketplace": true,
+      "portable": true
+    },
+    {
+      "name": "yunxiao-project-lifecycle",
+      "version": "1.0.0",
+      "claude_marketplace": true,
+      "portable": true
+    }
+  ]
+}
