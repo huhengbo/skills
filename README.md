@@ -25,6 +25,7 @@ skills/
 - `tencentcloud-infra` — TencentCloud `tccli` operations with profile/region and mutation safety controls.
 - `werss-official-account` — WeRSS-powered WeChat Official Account search, subscription, article research, and feed URLs.
 - `yunxiao-project-lifecycle` — Yunxiao project/Codeup/pipeline/package/application/test lifecycle management and project binding.
+- `nezha-monitor` — Nezha Dashboard API queries and guarded server, monitoring, alert, network, file, and terminal operations.
 
 ## Progressive disclosure
 

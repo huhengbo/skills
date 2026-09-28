@@ -30,6 +30,12 @@
       "version": "1.0.0",
       "claude_marketplace": true,
       "portable": true
+    },
+    {
+      "name": "nezha-monitor",
+      "version": "1.0.0",
+      "claude_marketplace": true,
+      "portable": true
     }
   ]
 }

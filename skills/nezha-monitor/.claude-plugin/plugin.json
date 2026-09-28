@@ -1,0 +1,6 @@
+{
+  "name": "nezha-monitor",
+  "description": "Nezha Dashboard API operations and guarded Agent workflows",
+  "version": "1.0.0",
+  "author": {"name": "skills-maintainers"}
+}
