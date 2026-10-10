@@ -1,0 +1,6 @@
+{
+  "name": "pve-admin",
+  "description": "Proxmox VE REST API operations for nodes, VMs, LXC, storage, backups, and tasks with guarded mutations",
+  "version": "1.0.0",
+  "author": {"name": "skills-maintainers"}
+}

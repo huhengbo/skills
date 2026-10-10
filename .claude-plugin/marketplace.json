@@ -57,6 +57,15 @@
       "author": {
         "name": "skills-maintainers"
       }
+    },
+    {
+      "name": "pve-admin",
+      "source": "./skills/pve-admin",
+      "description": "Proxmox VE API operations for VMs, LXC, storage, backups with guarded mutations",
+      "version": "1.0.0",
+      "author": {
+        "name": "skills-maintainers"
+      }
     }
   ]
 }
