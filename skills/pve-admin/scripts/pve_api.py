@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Dependency-free Proxmox VE API client. Reads credentials only from env.
 
-Env: PVE_BASE_URL (https://host:8006), PVE_API_TOKEN (user@realm!tokenid=secret),
-optional PVE_CA_FILE (trusted CA/self-signed cert PEM) or PVE_INSECURE_TLS=1.
+Env per instance NAME: PVE_<NAME>_BASE_URL (https://host:8006) and
+PVE_<NAME>_API_TOKEN (user@realm!tokenid=secret); select with --instance NAME.
+A single unnamed instance may use PVE_BASE_URL / PVE_API_TOKEN.
+Optional PVE_CA_FILE (trusted CA/self-signed cert PEM) or PVE_INSECURE_TLS=1.
 Mutations (non-GET) are refused unless --yes is given.
 """
 import argparse
@@ -26,6 +28,25 @@ def build_url(base, path, query):
     return base.rstrip("/") + path + ("?" + qs if qs else "")
 
 
+def list_instances(env):
+    return sorted(k[4:-9].lower() for k in env if k.startswith("PVE_") and k.endswith("_BASE_URL") and len(k) > 13)
+
+
+def resolve_instance(env, name):
+    """Return (base_url, token) for the named instance, or the unnamed default."""
+    names = list_instances(env)
+    if not name and not env.get("PVE_BASE_URL"):
+        if len(names) == 1:
+            name = names[0]
+        elif names:
+            raise SystemExit("Multiple instances configured; pass --instance one of: " + ", ".join(names))
+    prefix = f"PVE_{name.upper()}_" if name else "PVE_"
+    base, token = env.get(prefix + "BASE_URL", ""), env.get(prefix + "API_TOKEN", "")
+    if not base or not token:
+        raise SystemExit(f"Set {prefix}BASE_URL and {prefix}API_TOKEN" + (f" (known instances: {', '.join(names)})" if names else ""))
+    return base, token
+
+
 def tls_context():
     if os.environ.get("PVE_INSECURE_TLS") == "1":
         ctx = ssl.create_default_context()
@@ -37,16 +58,20 @@ def tls_context():
 
 def main(argv=None):
     p = argparse.ArgumentParser()
-    p.add_argument("method", choices=["GET", "POST", "PUT", "DELETE"])
-    p.add_argument("path", help="API path, e.g. /nodes or /nodes/pve1/qemu")
+    p.add_argument("method", choices=["GET", "POST", "PUT", "DELETE", "LIST"], help="LIST prints configured instance names")
+    p.add_argument("path", nargs="?", default="", help="API path, e.g. /nodes or /nodes/pve1/qemu")
+    p.add_argument("--instance", default=os.environ.get("PVE_INSTANCE", ""), help="instance name (PVE_<NAME>_*)")
     p.add_argument("--data", help="JSON request body (object)")
     p.add_argument("--query", action="append", default=[], help="key=value")
     p.add_argument("--yes", action="store_true", help="allow a mutating request")
     a = p.parse_args(argv)
+    if a.method == "LIST":
+        print("\n".join(list_instances(os.environ)))
+        return
+    if not a.path:
+        raise SystemExit("path is required")
     check_write_guard(a.method, a.yes)
-    base, token = os.environ.get("PVE_BASE_URL", ""), os.environ.get("PVE_API_TOKEN", "")
-    if not base or not token:
-        raise SystemExit("Set PVE_BASE_URL and PVE_API_TOKEN")
+    base, token = resolve_instance(os.environ, a.instance)
     headers = {"Authorization": "PVEAPIToken=" + token, "Accept": "application/json"}
     body = None
     if a.data:

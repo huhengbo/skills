@@ -22,6 +22,31 @@ class WriteGuardTest(unittest.TestCase):
         self.assertIn("--yes", str(ctx.exception))
 
 
+class InstanceTest(unittest.TestCase):
+    ENV = {"PVE_MAIN_BASE_URL": "https://a", "PVE_MAIN_API_TOKEN": "ta", "PVE_N100_BASE_URL": "https://b", "PVE_N100_API_TOKEN": "tb"}
+
+    def test_list(self):
+        self.assertEqual(pve_api.list_instances(self.ENV), ["main", "n100"])
+
+    def test_named(self):
+        self.assertEqual(pve_api.resolve_instance(self.ENV, "N100"), ("https://b", "tb"))
+
+    def test_ambiguous_requires_name(self):
+        with self.assertRaises(SystemExit) as ctx:
+            pve_api.resolve_instance(self.ENV, "")
+        self.assertIn("main, n100", str(ctx.exception))
+
+    def test_single_instance_default(self):
+        self.assertEqual(pve_api.resolve_instance({"PVE_MAIN_BASE_URL": "u", "PVE_MAIN_API_TOKEN": "t"}, ""), ("u", "t"))
+
+    def test_unnamed_fallback(self):
+        self.assertEqual(pve_api.resolve_instance({"PVE_BASE_URL": "u", "PVE_API_TOKEN": "t"}, ""), ("u", "t"))
+
+    def test_unknown_name(self):
+        with self.assertRaises(SystemExit):
+            pve_api.resolve_instance(self.ENV, "nope")
+
+
 class UrlTest(unittest.TestCase):
     def test_default_prefix_and_query(self):
         self.assertEqual(

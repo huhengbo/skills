@@ -9,21 +9,21 @@ description: 通过 Proxmox VE（PVE）REST API 查询和管理节点、虚拟�
 
 ## 凭证与请求
 
-- 环境变量：`PVE_BASE_URL`（如 `https://pve.example:8006`）、`PVE_API_TOKEN`（`user@realm!tokenid=secret`）。不要猜测或硬编码。
+- 多实例：每个 PVE 用 `PVE_<NAME>_BASE_URL`（如 `https://pve.example:8006`）与 `PVE_<NAME>_API_TOKEN`（`user@realm!tokenid=secret`）；脚本用 `--instance NAME`（或 `PVE_INSTANCE`）选择，`python scripts/pve_api.py LIST` 列出已配置实例。只配置了一个实例时可省略；多个实例而用户未指明目标时，先问清楚，不要默认选一个。单实例也可用不带名称的 `PVE_BASE_URL` / `PVE_API_TOKEN`。不要猜测或硬编码。
 - 自签名证书：优先 `PVE_CA_FILE` 指向受信 PEM；仅在用户确认后临时用 `PVE_INSECURE_TLS=1`。
 - 认证头为 `Authorization: PVEAPIToken=<token>`；响应数据在 `data` 字段。
 - 使用 `scripts/pve_api.py`（仅标准库，Windows/macOS/Linux 通用）：
 
 ```text
-python scripts/pve_api.py GET /nodes
-python scripts/pve_api.py POST /nodes/pve1/qemu/100/status/start --yes
+python scripts/pve_api.py --instance main GET /nodes
+python scripts/pve_api.py --instance n100 POST /nodes/pve1/qemu/100/status/start --yes
 ```
 
 脚本对 POST/PUT/DELETE 缺少 `--yes` 时拒绝执行；`--yes` 只在用户已授权该具体动作后添加。
 
 ## 工作流
 
-1. `GET /version`、`GET /nodes` 验证地址、权限，记录节点名与在线状态。
+1. 确认目标实例（`LIST`）；`GET /version`、`GET /nodes` 验证地址、权限，记录节点名与在线状态。
 2. 用 `GET /cluster/resources?type=vm` 定位 VMID、类型（qemu/lxc）、所在节点和当前状态，确认目标与用户所指一致。
 3. 写操作前读取当前配置（`.../config`）与状态；执行一次写入；随后读回确认。
 4. 异步操作返回 `UPID:...` 任务号：轮询 `GET /nodes/{node}/tasks/{upid}/status` 直到 `status=stopped`，且 `exitstatus` 为 `OK` 才算成功；失败时读 `.../log`。
