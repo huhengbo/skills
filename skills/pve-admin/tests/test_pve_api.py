@@ -47,6 +47,21 @@ class InstanceTest(unittest.TestCase):
             pve_api.resolve_instance(self.ENV, "nope")
 
 
+class EnvFileTest(unittest.TestCase):
+    def test_loads_unset_keys_only(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "pve.env"
+            f.write_text("# c\nexport PVE_A_BASE_URL='https://a'\nexport PVE_A_API_TOKEN=\"t=1\"\nOTHER=x\n", encoding="utf-8")
+            env = pve_api.load_env_file({"PVE_A_BASE_URL": "keep"}, str(f))
+        self.assertEqual(env["PVE_A_BASE_URL"], "keep")
+        self.assertEqual(env["PVE_A_API_TOKEN"], "t=1")
+        self.assertNotIn("OTHER", env)
+
+    def test_missing_file_is_ignored(self):
+        self.assertEqual(pve_api.load_env_file({}, "/nonexistent/pve.env"), {})
+
+
 class UrlTest(unittest.TestCase):
     def test_default_prefix_and_query(self):
         self.assertEqual(

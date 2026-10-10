@@ -4,6 +4,8 @@
 Env per instance NAME: PVE_<NAME>_BASE_URL (https://host:8006) and
 PVE_<NAME>_API_TOKEN (user@realm!tokenid=secret); select with --instance NAME.
 A single unnamed instance may use PVE_BASE_URL / PVE_API_TOKEN.
+Missing variables are also read from ~/.pve.env (or PVE_ENV_FILE) as `export K='V'` lines,
+because agent sessions do not always inherit the shell profile.
 Optional PVE_CA_FILE (trusted CA/self-signed cert PEM) or PVE_INSECURE_TLS=1.
 Mutations (non-GET) are refused unless --yes is given.
 """
@@ -26,6 +28,24 @@ def build_url(base, path, query):
     path = path if path.startswith("/api2/") else "/api2/json/" + path.lstrip("/")
     qs = parse.urlencode([tuple(q.split("=", 1)) for q in query if "=" in q])
     return base.rstrip("/") + path + ("?" + qs if qs else "")
+
+
+def load_env_file(env, path=None):
+    """Fill unset PVE_* keys in env from an export-style file; real env wins."""
+    path = path or env.get("PVE_ENV_FILE") or os.path.join(os.path.expanduser("~"), ".pve.env")
+    try:
+        lines = open(path, encoding="utf-8").read().splitlines()
+    except OSError:
+        return env
+    for line in lines:
+        line = line.strip()
+        if line.startswith("export "):
+            line = line[7:]
+        key, sep, value = line.partition("=")
+        key = key.strip()
+        if sep and key.startswith("PVE_") and key not in env:
+            env[key] = value.strip().strip("'\"")
+    return env
 
 
 def list_instances(env):
@@ -65,6 +85,7 @@ def main(argv=None):
     p.add_argument("--query", action="append", default=[], help="key=value")
     p.add_argument("--yes", action="store_true", help="allow a mutating request")
     a = p.parse_args(argv)
+    load_env_file(os.environ)
     if a.method == "LIST":
         print("\n".join(list_instances(os.environ)))
         return
