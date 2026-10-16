@@ -102,6 +102,10 @@ function printHuman(result) {
   console.log(`Read preflight ready: ${result.readOnlyReady ? "yes" : "no"}`);
   console.log(`Write preflight ready: ${result.writePreflightReady ? "yes" : "no"}`);
   console.log("Target/workflow authorization: not evaluated by doctor");
+  if (result.nextSteps?.length > 0) {
+    console.log("Next steps:");
+    for (const step of result.nextSteps) console.log(`  - ${step}`);
+  }
 }
 
 async function main() {

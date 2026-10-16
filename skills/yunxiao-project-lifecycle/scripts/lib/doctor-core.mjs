@@ -1,4 +1,5 @@
 import { parseBinding } from "./binding.mjs";
+import { nextStepsFor } from "./guidance.mjs";
 
 export const DEFAULT_MCP_URL = "https://openapi-rdc.aliyuncs.com/ai/mcp?toolsets=organization-management,project-management,code-management,pipeline-management,packages-management,application-delivery,test-management";
 export const PRIMARY_TOKEN_ENV = "ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN";
@@ -126,6 +127,7 @@ function createResult({
     // Request-scoped profiles must use writePreflightReady and still perform target/workflow checks.
     writeReady: capabilityProfile === "full" && status === "READY" && bindingReady,
     writePreflightReady: writePreflightRequested && serviceReady && identityReady && capabilityReady && bindingReady,
+    nextSteps: nextStepsFor(status),
     platform,
     architecture: process.arch,
     endpoint: { url: DEFAULT_MCP_URL, regionConfigured },

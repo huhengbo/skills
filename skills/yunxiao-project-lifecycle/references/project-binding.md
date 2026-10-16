@@ -86,11 +86,11 @@ Never use the current/last organization, a project name, or recent history as an
 
 When the file is missing:
 
-1. Perform read-only identity, organization, project, and repository discovery.
+1. Perform read-only identity, organization, project, and repository discovery with the MCP tools listed in [Where to find IDs](mcp-setup.md#where-to-find-ids). Do not ask the user to look up IDs by hand unless discovery returns nothing; if they must, send them to the admin console path in that section.
 2. Present stable project candidates with display names and codes.
 3. Require the user to select one project explicitly.
 4. Discover optional type and assignee defaults; ask only when multiple candidates materially affect future behavior.
-5. Show the proposed placeholder-free TOML and create it only after the user requests the binding.
+5. Show the proposed placeholder-free TOML, ask whether the team commits it or ignores it (add to `.gitignore`), and create it only after the user requests the binding.
 6. Re-read and remotely validate it before the first Yunxiao write.
 
 Do not create a binding merely because the user asked to inspect available projects.

@@ -14,6 +14,10 @@ Use this file as the task entry point. Detailed service rules live in references
 3. Resolve the project root and read `<project-root>/yunxiao.toml`. Follow [project binding](references/project-binding.md). A missing binding allows discovery reads only; an invalid/stale binding blocks writes.
 4. Before any write, load the relevant section of [lifecycle policy](references/lifecycle-policy.md). That document is the normative source for operation-specific capability maps, action rules, duplicate checks, multi-write limits, deletion/archival rules, pipeline/application/test behavior, and result semantics.
 
+## First-time setup
+
+If the doctor or a preflight reports `TOKEN_MISSING`, `MCP_MISSING`, `AUTH_FAILED`, or `BINDING_MISSING`, guide the user instead of stopping: [MCP setup](references/mcp-setup.md#first-time-setup-what-the-user-does) lists what the user does, what they provide, where to find the token and IDs, and how to verify, for Windows, macOS, and Linux. Run `node scripts/doctor.mjs --project-root <project-root>` after each step; it prints `Next steps` for the current failure. The token is entered locally only, never pasted into chat.
+
 ## Context and target resolution
 
 - Project binding comes only from repository-root `yunxiao.toml`; never substitute a global organization variable, recent history, or a same-name project.

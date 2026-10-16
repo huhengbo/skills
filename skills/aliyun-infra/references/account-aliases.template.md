@@ -1,6 +1,6 @@
 # Account Alias Template
 
-Use this file as a sanitized alias map for local environments.
+Use this file as a sanitized alias map for local environments. Copy it to `account-aliases.md` in this directory (git-ignored) and edit the copy; see `setup.md`.
 Do not commit real account names, IDs, emails, or internal org names.
 
 ## Template

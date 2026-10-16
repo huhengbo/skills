@@ -5,7 +5,7 @@ Symptom:
 - `aliyun: command not found`
 
 Action:
-1. Install Aliyun CLI.
+1. Install Aliyun CLI for the user's platform (see `setup.md`). On Windows, open a new PowerShell window after updating `PATH`.
 2. Verify with:
 ```bash
 aliyun --version
@@ -19,8 +19,8 @@ Symptom:
 Action:
 ```bash
 aliyun configure list
-aliyun configure --profile <profile>
 ```
+If the profile is absent or `Invalid`, ask the user to run `aliyun configure --mode <mode> --profile <profile>` in their own terminal (see `setup.md`). Do not collect AccessKey values in chat.
 
 ## Invalid Access Key
 Symptom:
@@ -28,8 +28,8 @@ Symptom:
 - `SignatureDoesNotMatch`
 
 Action:
-1. Verify profile key pair.
-2. Reconfigure profile.
+1. Check `aliyun configure list` for the profile; do not print the config file.
+2. Ask the user to reconfigure the profile locally (see `setup.md`); if the key was disabled or rotated in the RAM console, create a new one there.
 3. Retry identity check:
 ```bash
 aliyun sts GetCallerIdentity --profile <profile>
@@ -167,16 +167,9 @@ Symptom:
 Action:
 1. Do not create a second deployment job or change DNS yet.
 2. Sample the public endpoint repeatedly:
-```bash
-bash <skill-dir>/scripts/check_tls_certificate.sh \
-  --host <customDomain> \
-  --expected-serial <newCertificateSerial> \
-  --samples 8 \
-  --interval 5 \
-  --require-valid
+```text
+python <skill-dir>/scripts/check_tls_certificate.py --host <customDomain> --expected-serial <newCertificateSerial> --samples 8 --interval 5 --require-valid
 ```
-3. Wait until all samples report exactly one new serial number before running a strict request:
-```bash
-curl --noproxy '*' -4 -sSIL --fail https://<customDomain>/<path>
-```
+(`python3` on macOS/Linux if `python` is absent; no Bash needed on Windows.)
+3. Wait until all samples report exactly one new serial number before running a strict HTTPS request with a native HTTP client (`curl` on macOS/Linux, `curl.exe` or `Invoke-WebRequest` in PowerShell; see `cas-oss-certificates.md`).
 4. If the serial number is consistent but the page is blank, diagnose the application separately: inspect the HTTP response, JavaScript errors, and client-side route. Certificate replacement cannot fix a missing SPA route or runtime error.

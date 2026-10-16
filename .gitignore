@@ -23,3 +23,6 @@ __pycache__/
 .pytest_cache/
 .coverage
 node_modules/
+
+# Local, user-specific Aliyun profile aliases (copy of account-aliases.template.md)
+skills/aliyun-infra/references/account-aliases.md

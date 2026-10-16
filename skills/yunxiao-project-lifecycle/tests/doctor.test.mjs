@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -99,6 +99,16 @@ test("reports TOKEN_MISSING without making a request", async () => {
   assert.equal(result.writeReady, false);
   assert.equal(called, false);
   assert.doesNotMatch(JSON.stringify(result), /Bearer\s+/i);
+});
+
+test("failure statuses carry actionable next steps that point at existing setup sections", async () => {
+  const result = await runDoctor({ env: {}, platform: "win32", bindingText: null });
+  assert.equal(result.status, "TOKEN_MISSING");
+  assert.ok(result.nextSteps.length > 0);
+  const setupDoc = await readFile(path.join(SKILL_ROOT, "references", "mcp-setup.md"), "utf8");
+  for (const [, heading] of result.nextSteps.join("\n").matchAll(/"([A-Z][^"]+)"/g)) {
+    assert.match(setupDoc, new RegExp(`^#+ ${heading}$`, "m"), `missing heading: ${heading}`);
+  }
 });
 
 test("rejects malformed tokens without making a request", async () => {

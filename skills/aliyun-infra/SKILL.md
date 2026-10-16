@@ -8,6 +8,9 @@ description: Standardized Alibaba Cloud (Aliyun) operations via aliyun CLI for m
 ## Overview
 Use this skill to run Aliyun CLI operations with consistent safety controls, profile and region resolution, and sanitized outputs.
 
+## First-time setup
+If `aliyun` is not installed, `aliyun configure list` shows no `Valid` profile, or the user is new, guide them with `references/setup.md` instead of stopping: install the CLI, create a RAM credential, configure a profile in their own terminal, verify identity, and optionally set aliases. It covers Windows, macOS, and Linux and states what the user must do and provide. Never ask for AccessKey values in chat or put them on a command line.
+
 ## Execution Workflow
 1. Classify request type first:
 - Read-only: `Describe*`, `List*`, `Get*`
@@ -43,6 +46,7 @@ aliyun sts GetCallerIdentity --profile <profile>
 - For destructive operations, require explicit confirmation and display rollback hints when possible.
 
 ## Command Selection
+Load `references/setup.md` for installation, credential, profile, plugin, and permission setup.
 Load `references/command-catalog.md` for service commands and safe examples.
 Load `references/sms.md` for SMS/Dysmsapi sending, signature/template discovery, delivery queries, and statistics.
 Load `references/cas-oss-certificates.md` before every CAS, certificate, DNS-validation, OSS-custom-domain certificate deployment, or TLS-propagation request.
