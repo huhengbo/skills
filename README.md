@@ -32,7 +32,7 @@ skills/
 - `cliproxyapi-management-api` — CLIProxyAPI 接口参考及带保护的 provider 管理工作流。
 - `tencentcloud-infra` — 腾讯云 `tccli` 运维，带 profile/地域及变更安全控制。
 - `werss-official-account` — 基于 WeRSS 的微信公众号搜索、订阅、文章研究和 feed 地址。
-- `yunxiao-project-lifecycle` — 云效项目 / Codeup / 流水线 / 制品仓库 / 应用交付 / 测试的生命周期管理及项目绑定。
+- `yunxiao-project-lifecycle` — 云效项目 / Codeup / 流水线 / 制品仓库 / 应用交付 / 测试的生命周期管理及项目绑定；含工作项登记规范（层级、前置依赖、标题与描述模板、自动化规则）和补 MCP 缺口的 OpenAPI 工具（关联、需求树、改描述）。
 - `nezha-monitor` — 哪吒监控 Dashboard API 查询，以及带保护的服务器、监控、告警、网络、文件和终端操作。
 - `pve-admin` — Proxmox VE REST API 查询，以及带保护的 VM/LXC、快照、备份和任务操作。
 

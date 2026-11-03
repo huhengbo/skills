@@ -44,7 +44,7 @@
       "name": "yunxiao-project-lifecycle",
       "source": "./skills/yunxiao-project-lifecycle",
       "description": "Portable Yunxiao project, Codeup, pipeline, package, delivery and test lifecycle skill",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "skills-maintainers"
       }

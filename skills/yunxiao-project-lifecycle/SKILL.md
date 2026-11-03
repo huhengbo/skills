@@ -1,6 +1,6 @@
 ---
 name: yunxiao-project-lifecycle
-description: Manage Alibaba Cloud Yunxiao (云效) project, Codeup repository, Flow pipelines, package repositories, application delivery, and test lifecycles through the official MCP. Use for Yunxiao project binding, requirements/defects/tasks, repositories, branches, files, merge requests, reviews, pipelines, jobs/logs, packages, applications, deployments, tests, deletion, archival, scheduling, bounded automation, MCP setup, diagnostics, and yunxiao.toml.
+description: Manage Alibaba Cloud Yunxiao (云效) project, Codeup repository, Flow pipelines, package repositories, application delivery, and test lifecycles through the official MCP. Use for Yunxiao project binding, requirements/defects/tasks, repositories, branches, files, merge requests, reviews, pipelines, jobs/logs, packages, applications, deployments, tests, deletion, archival, scheduling, bounded automation, MCP setup, diagnostics, and yunxiao.toml; also for registering or reorganizing work items (需求/缺陷/任务登记、父子层级、关联与前置依赖、需求池、版本、标题与描述规范) and Projex automation rules.
 ---
 
 # Yunxiao Project Lifecycle
@@ -10,9 +10,10 @@ Use this file as the task entry point. Detailed service rules live in references
 ## Start every task
 
 1. Identify the requested operation and whether it is read-only, a single write, a bounded multi-object write, or a high-risk action.
-2. Verify the active Yunxiao MCP/authentication and only the capability needed by the request. Follow [MCP setup](references/mcp-setup.md) for missing auth, transport, protocol, or tools. Do not invent a second Yunxiao API client as a fallback.
+2. Verify the active Yunxiao MCP/authentication and only the capability needed by the request. Follow [MCP setup](references/mcp-setup.md) for missing auth, transport, protocol, or tools. The only non-MCP client allowed is the bundled `scripts/workitems.mjs`, for the work-item gaps listed in lifecycle policy; do not write another API client.
 3. Resolve the project root and read `<project-root>/yunxiao.toml`. Follow [project binding](references/project-binding.md). A missing binding allows discovery reads only; an invalid/stale binding blocks writes.
 4. Before any write, load the relevant section of [lifecycle policy](references/lifecycle-policy.md). That document is the normative source for operation-specific capability maps, action rules, duplicate checks, multi-write limits, deletion/archival rules, pipeline/application/test behavior, and result semantics.
+5. Before registering, retitling, or reorganizing work items, read [work-item practices](references/work-item-practices.md): platform constraints (relation types, defects without parents, initial status, UI-only settings, automation limits), default conventions, and the batch registration workflow.
 
 ## First-time setup
 
@@ -72,14 +73,19 @@ node scripts/doctor.mjs --project-root <project-root>
 node scripts/doctor.mjs --project-root <project-root> --json
 node scripts/install.mjs --target <agent-skill-directory>
 node scripts/install.mjs --target <agent-skill-directory> --apply
+node scripts/workitems.mjs tree <serial> --project-root <project-root>
+node scripts/workitems.mjs relate <source> <target> --type ASSOCIATED --project-root <project-root> [--apply]
+node scripts/workitems.mjs set-description <serial> <markdown-file> --project-root <project-root> [--apply]
 ```
 
-`doctor.mjs` is read-only. `install.mjs` is dry-run-first and never configures credentials. Canonical tooling uses Node.js 18+ and must run natively on Windows, macOS, and Linux without requiring Bash or WSL.
+`doctor.mjs` is read-only. `install.mjs` and the `workitems.mjs` write commands are dry-run-first; `workitems.mjs` reads back every write and never prints the token. Canonical tooling uses Node.js 18+ and must run natively on Windows, macOS, and Linux without requiring Bash or WSL.
 
 ## Resources
 
 - [MCP setup](references/mcp-setup.md): authentication, transport/protocol diagnostics, platform guidance, and repair boundaries.
 - [Project binding](references/project-binding.md): `yunxiao.toml` schema, project-root resolution, remote validation, and binding creation.
 - [Lifecycle policy](references/lifecycle-policy.md): normative tool/action matrix, object-specific rules, bounded writes, deletion/archival/automation, and result semantics.
+- [Work-item practices](references/work-item-practices.md): observed Projex platform constraints, default registration conventions, and the batch registration workflow.
 - `scripts/doctor.mjs`: portable read-only diagnostics.
 - `scripts/install.mjs`: explicit-target portable installation.
+- `scripts/workitems.mjs`: Projex OpenAPI helper for relations, hierarchy reads, and description replacement the MCP lacks.

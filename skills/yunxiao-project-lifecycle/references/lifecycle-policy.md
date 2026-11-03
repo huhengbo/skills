@@ -24,6 +24,8 @@ Use verified equivalent capabilities when a client presents names differently. T
 | Application delivery and release | `create_change_order`, `execute_app_release_stage`, `cancel_app_release_stage_execution`, `retry_app_release_stage_pipeline`, `skip_app_release_stage_pipeline`, `pass_app_release_stage_validate`, `refuse_app_release_stage_validate` |
 | Test management | `list_testcase_directories`, `create_testcase_directory`, `create_testcase`, `search_testcases`, `get_testcase`, `delete_testcase`, `list_test_plans`, `get_test_result_list`, `update_test_result`, `get_test_plan_progress`, `list_test_plan_result_directories` |
 | Work items | `search_workitems`, `get_work_item`, `create_work_item`, `update_work_item` |
+| Work-item relations and attachments | `list_work_item_relation_work_item_types`, `list_workitem_relation_records`, `create_workitem_relation_record`, `create_workitem_attachment` |
+| MCP gaps (bundled helper) | `scripts/workitems.mjs`: `get`, `tree`, `relations`, `relate`, `set-description` over the official Projex OpenAPI |
 | Types and workflows | `list_work_item_types`, `get_work_item_type`, `get_work_item_workflow` |
 | Comments and activity | `list_work_item_comments`, `create_work_item_comment`, `list_workitem_activities` |
 | Sprints | `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint` |
@@ -59,8 +61,9 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 | Update one field or perform one legal status transition | Execute after current-object and workflow validation |
 | Create/update one sprint or version | Execute when dates, owner, bound project, and intended semantics are explicit |
 | Analyze, summarize, inspect, plan, triage, recommend | Read only; never infer a write |
-| Explicitly authorized bounded multi-object update | Execute sequentially for at most 20 uniquely identified objects when every object receives the same explicit field change; pre-read and post-read each object, stop on the first failure, and report partial results |
-| Bulk API write, inferred/open-ended batch, mixed-operation batch, or batch create | Reject with zero write calls |
+| Explicitly authorized bounded multi-object update | Execute sequentially when every object receives the same explicit field change; more than 20 objects requires the user to approve the complete enumerated list first; pre-read and post-read each object, stop on the first failure, and report partial results |
+| Approved registration plan (batch create, retitle, re-parent, relate) | Execute only after the user approves an enumerated plan naming every object and its exact changes; follow the batch workflow in [work-item practices](work-item-practices.md#3-batch-registration-workflow), one object and one write at a time |
+| Bulk API write, or a batch inferred from a broad query without an approved list | Reject with zero write calls |
 
 ## Single-write protocol
 
@@ -77,14 +80,14 @@ Do not assume a tool exists merely because this table lists it. Gate each reques
 
 Use this protocol only when the user explicitly identifies every target and requests the same unambiguous update for all targets.
 
-1. Limit the ordered set to 20 objects and resolve every target to exactly one stable ID before the first write.
+1. Limit the ordered set to 20 objects unless the user approved the complete enumerated list, and resolve every target to exactly one stable ID before the first write.
 2. Validate the organization, project, member, requested field, and scope once, then pre-read each target immediately before its write.
 3. Submit one ordinary single-object write at a time. Never use a bulk endpoint or concurrent writes.
 4. Post-read and verify each object before moving to the next.
 5. Stop immediately on rejection, failure, uncertainty, or verification mismatch. Never compensate or roll back earlier verified writes automatically.
 6. Report each object as `VERIFIED_SUCCESS`, `SUBMITTED_UNVERIFIED`, `REJECTED`, or `FAILED`, and state clearly when only a prefix of the ordered set was completed.
 
-Reject with zero writes when targets are inferred from a broad query such as “all defects,” the objects need different changes, any target is ambiguous, the set exceeds 20, or the user has not explicitly authorized the full set.
+Reject with zero writes when targets are inferred from a broad query such as “all defects,” the objects need different changes, any target is ambiguous, the set exceeds 20 without approval of the full list, or the user has not explicitly authorized the full set.
 
 ## Creation rules
 
@@ -93,6 +96,17 @@ Reject with zero writes when targets are inferred from a broad query such as “
 - Check active work items in the bound project for the same category and exact normalized title. A candidate duplicate stops creation and is shown to the user.
 - Do not treat a similar title as proof of duplication. Ask when the match is uncertain.
 - Resolve parent, sprint, version, labels, participants, trackers, and verifier only when explicitly requested or defined by a validated project convention.
+- A new item starts in the workflow's initial status. If the requested status differs, perform one legal transition after creation and verify it.
+- Before creating a relation, check the allowed type pair with `list_work_item_relation_work_item_types`. Requirement-to-requirement dependencies and defect parents are not allowed; see [work-item practices](work-item-practices.md#relations) for the substitute.
+
+## OpenAPI helper for MCP gaps
+
+`scripts/workitems.mjs` is the only permitted non-MCP client. It covers relation reads and writes, hierarchy reads, and whole-description replacement, which the MCP does not expose or does too slowly in batches.
+
+- It uses the same token variables and the official OpenAPI host, or a validated `YUNXIAO_API_BASE_URL` region origin.
+- It binds to `yunxiao.toml`, rejects serials outside the bound project code, and disables redirects.
+- Writes are dry runs unless `--apply` is passed. Each write is pre-read, skipped when already satisfied, submitted once, and read back. It reports the result states defined below.
+- Use the MCP for everything else. Do not extend the helper with deletion, workflow, or bulk endpoints.
 
 ## Code management rules
 
